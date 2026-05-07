@@ -85,7 +85,7 @@
 
     <!-- 订单 -->
     <div class="page" id="page-orders">
-      <div class="section-title">采购订单</div>
+      <div class="section-title">Cash Sales</div>
       <div id="orders-list"><div class="loading">加载中...</div></div>
     </div>
 
@@ -118,7 +118,7 @@
     <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">🏠</span>主页</button>
     <button class="nav-btn" data-page="products"><span class="nav-icon">📦</span>产品</button>
     <button class="nav-btn" data-page="stockin"><span class="nav-icon">📥</span>进货</button>
-    <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span>订单</button>
+    <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span>Cash Sales</button>
     <button class="nav-btn" data-page="suppliers"><span class="nav-icon">🏭</span>供应商</button>
     <button class="nav-btn" data-page="customers"><span class="nav-icon">👥</span>客户</button>
     <button class="nav-btn" data-page="audit" id="nav-audit" style="display:none"><span class="nav-icon">📜</span>审计</button>
@@ -180,15 +180,15 @@
   </div>
 </div>
 
-<!-- 采购订单 Modal -->
+<!-- Cash Sales Modal -->
 <div class="modal-bg" id="modal-order">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">新增采购订单</div>
+    <div class="modal-title">Cash Sales</div>
     <div class="form-group"><label class="form-label">客户</label><select id="o-cust"></select></div>
     <div class="form-group"><label class="form-label">产品</label><select id="o-prod"></select></div>
     <div class="form-group"><label class="form-label" id="o-qty-label">数量</label><input type="number" id="o-qty" placeholder="0" min="1" inputmode="numeric"></div>
-    <button class="btn-primary" id="btn-order">创建订单</button>
+    <button class="btn-primary" id="btn-order">出货</button>
     <button class="btn-cancel" id="btn-order-cancel">取消</button>
   </div>
 </div>

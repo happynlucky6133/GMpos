@@ -586,7 +586,7 @@ function applyPermissions() {
   function renderOrders() {
     const container = document.getElementById('orders-list');
     if (state.orders.length === 0) {
-      container.innerHTML = '<div class="empty">暂无订单</div>';
+      container.innerHTML = '<div class="empty">暂无 Cash Sales 记录</div>';
       return;
     }
 
@@ -851,7 +851,7 @@ function applyPermissions() {
     if (!qty || qty < 1) { showToast('请输入正确数量', 'err'); return; }
     const btn = document.getElementById('btn-order');
     btn.disabled = true;
-    btn.textContent = '创建中...';
+    btn.textContent = '出货中...';
     try {
       const now = new Date();
       const dateStr = now.toISOString().slice(0,10);
@@ -865,16 +865,16 @@ function applyPermissions() {
       await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'pending' });
       await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
 
-      showToast('订单已创建！', 'ok');
+      showToast('Cash Sales 已创建！', 'ok');
       document.getElementById('o-qty').value = '';
       closeModal();
-      auditLog('创建订单', poID, '客户 ' + getCustName(document.getElementById('o-cust').value) + ' 产品 ' + getProdName(productID) + ' x' + qty + ' ' + unit);
+      auditLog('创建出货', poID, '产品 ' + getProdName(productID) + ' x' + qty + ' ' + unit);
       await loadAll();
     } catch (e) {
       showToast('提交失败: ' + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '创建订单';
+    btn.textContent = '创建出货';
   }
 
   async function changeOrderStatus(poID, status, productID, qty) {
@@ -891,8 +891,8 @@ function applyPermissions() {
           await sbPatch('products', 'ProductID', productID, { StockBalance: newBalance });
         }
       }
-      const statusLabel = status === 'done' ? '订单完成' : '订单取消';
-      showToast(status === 'done' ? '订单已完成 ✓' : '订单已取消', status === 'done' ? 'ok' : 'err');
+      const statusLabel = status === 'done' ? '出货完成' : '出货取消';
+      showToast(status === 'done' ? '出货已完成 ✓' : '出货已取消', status === 'done' ? 'ok' : 'err');
       auditLog(statusLabel, poID, '产品 ' + getProdName(productID) + ' x' + qty + ' ' + getProdUnit(productID));
       await loadAll();
     } catch (e) {
@@ -931,7 +931,7 @@ function applyPermissions() {
           } else if (type === 'order') {
             await sbDelete('purchase_orders', 'POID', id);
             await sbDelete('po_details', 'POID', id).catch(() => {});
-            auditLog('删除订单', id, '');
+            auditLog('删除出货', id, '');
           }
           showToast('删除成功', 'ok');
           await loadAll();
