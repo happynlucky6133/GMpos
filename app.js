@@ -581,56 +581,30 @@ function applyPermissions() {
     attachDeleteHandlers(container);
   }
 
-  const STATUS_LABELS = { pending: '待处理', done: '完成', cancelled: '取消' };
-  const STATUS_CHIPS = { pending: 'chip-p', done: 'chip-d', cancelled: 'chip-c' };
-
   function renderOrders() {
     const container = document.getElementById('orders-list');
     if (state.orders.length === 0) {
-      container.innerHTML = '<div class="empty">暂无 出货 记录</div>';
+      container.innerHTML = '<div class="empty">暂无出货记录</div>';
       return;
     }
 
-    const canAction = currentUser && (currentUser.Role === 'admin' || currentUser.Role === 'sales');
-
     container.innerHTML = [...state.orders].reverse().map(o => {
       const d = state.orderDetails.get(o.POID);
-      const st = o.Status || 'pending';
-      const label = STATUS_LABELS[st] || st;
-      const chipClass = STATUS_CHIPS[st] || 'chip-p';
       const productName = d ? escapeHTML(getProdName(d.ProductID)) : '-';
       const qty = d ? d.QTY : '-';
       const custName = escapeHTML(getCustName(o.CustomerID));
       const date = String(o.Date).slice(0,10);
       const unit = d ? getProdUnit(d.ProductID) : 'kg';
 
-      let actions = '';
-      if (st === 'pending' && canAction) {
-        actions = `<div class="order-actions">
-          <button class="order-btn order-btn-done" data-po="${o.POID}" data-status="done" data-pid="${d ? d.ProductID : ''}" data-qty="${d ? d.QTY : 0}">✓ 完成</button>
-          <button class="order-btn order-btn-cancel" data-po="${o.POID}" data-status="cancelled">✗ 取消</button>
-        </div>`;
-      }
-
       return `<div class="card">
         <div class="row-flex" style="margin-bottom:5px">
       <span class="mono">${o.POID}</span>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span class="chip ${chipClass}">${label}</span>
-            ${isAdmin() ? `<button class="del-btn sm" data-type="order" data-id="${o.POID}">✕</button>` : ''}
-          </div>
+          ${isAdmin() ? `<button class="del-btn sm" data-type="order" data-id="${o.POID}">✕</button>` : ''}
         </div>
         <div style="font-size:13px">${productName} · <strong>${qty} ${unit}</strong></div>
         <div class="row-sub">${custName} · ${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
-        ${actions}
       </div>`;
     }).join('');
-
-    container.querySelectorAll('.order-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        changeOrderStatus(this.dataset.po, this.dataset.status, this.dataset.pid || '', this.dataset.qty || '0');
-      });
-    });
   }
 
   // ============================================================
@@ -657,7 +631,7 @@ function applyPermissions() {
     container.innerHTML = '<div class="loading">查询中...</div>';
 
     try {
-      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&select=POID,TotalAmount';
+      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&select=POID,TotalAmount';
       const res = await fetch(url, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
@@ -680,7 +654,7 @@ function applyPermissions() {
       }
 
       if (count === 0) {
-        container.innerHTML = '<div class="empty">该日期没有已完成出货记录</div>';
+        container.innerHTML = '<div class="empty">该日期没有出货记录</div>';
         return;
       }
 
@@ -934,8 +908,15 @@ function applyPermissions() {
       const productID = document.getElementById('o-prod').value;
       const unit = getProdUnit(productID);
 
-      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'pending', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
+      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'done', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
       await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
+
+      // 创建即扣库存
+      const prod = getProd(productID);
+      if (prod) {
+        const newBalance = (Number(prod.StockBalance) || 0) - qty;
+        await sbPatch('products', 'ProductID', productID, { StockBalance: newBalance });
+      }
 
       showToast('出货 已创建！', 'ok');
       document.getElementById('o-qty').value = '';
@@ -947,29 +928,6 @@ function applyPermissions() {
     }
     btn.disabled = false;
     btn.textContent = '创建出货';
-  }
-
-  async function changeOrderStatus(poID, status, productID, qty) {
-    if (!currentUser || (currentUser.Role !== 'admin' && currentUser.Role !== 'sales')) {
-      showToast('无权操作', 'err');
-      return;
-    }
-    try {
-      await sbPatch('purchase_orders', 'POID', poID, { Status: status });
-      if (status === 'done' && productID && qty) {
-        const prod = getProd(productID);
-        if (prod) {
-          const newBalance = (Number(prod.StockBalance) || 0) - parseInt(qty);
-          await sbPatch('products', 'ProductID', productID, { StockBalance: newBalance });
-        }
-      }
-      const statusLabel = status === 'done' ? '出货完成' : '出货取消';
-      showToast(status === 'done' ? '出货已完成 ✓' : '出货已取消', status === 'done' ? 'ok' : 'err');
-      auditLog(statusLabel, poID, '产品 ' + getProdName(productID) + ' x' + qty + ' ' + getProdUnit(productID));
-      await loadAll();
-    } catch (e) {
-      showToast('操作失败', 'err');
-    }
   }
 
   // ============================================================
