@@ -620,7 +620,7 @@ function applyPermissions() {
           </div>
         </div>
         <div style="font-size:13px">${productName} · <strong>${qty} ${unit}</strong></div>
-        <div class="row-sub">${custName} · ${date}</div>
+        <div class="row-sub">${custName} · ${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
         ${actions}
       </div>`;
     }).join('');
@@ -862,7 +862,7 @@ function applyPermissions() {
       const productID = document.getElementById('o-prod').value;
       const unit = getProdUnit(productID);
 
-      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'pending' });
+      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'pending', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
       await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
 
       showToast('出货 已创建！', 'ok');
