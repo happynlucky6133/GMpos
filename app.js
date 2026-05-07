@@ -485,7 +485,7 @@ function applyPermissions() {
     }
 
     btn.disabled = false;
-    btn.textContent = '↻ 刷新';
+    btn.textContent = '↻ ' + t('刷新');
     state.loading = false;
   }
 
