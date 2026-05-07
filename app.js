@@ -286,7 +286,6 @@ function applyPermissions() {
   function buildIndexes(data) {
     state.products = new Map((data.products || []).map(p => [p.ProductID, p]));
     state.suppliers = new Map((data.suppliers || []).map(s => [s.SupplierID, s]));
-    state.customers = new Map((data.customers || []).map(c => [c.CustomerID, c]));
     state.stockIns = data.stockIns || [];
     state.stockInDetails = new Map((data.stockInDetails || []).map(d => [d.StockInID, d]));
     state.orders = data.orders || [];
@@ -296,8 +295,6 @@ function applyPermissions() {
     state.products.forEach((p, id) => prodNameCache.set(id, p.ProductName));
     supNameCache = new Map();
     state.suppliers.forEach((s, id) => supNameCache.set(id, s.SupplierName));
-    custNameCache = new Map();
-    state.customers.forEach((c, id) => custNameCache.set(id, c.CustomerName));
   }
 
   // ============================================================
@@ -313,10 +310,6 @@ function applyPermissions() {
       if (el) el.innerHTML = Array.from(state.products.values())
         .map(p => `<option value="${p.ProductID}">${escapeHTML(p.ProductName)} (${p.Grade || ''})</option>`).join('');
     });
-
-    const cust = document.getElementById('o-cust');
-    if (cust) cust.innerHTML = Array.from(state.customers.values())
-      .map(c => `<option value="${c.CustomerID}">${escapeHTML(c.CustomerName)}</option>`).join('');
 
     // 初始化数量单位标签
     updateQtyLabels();
@@ -585,7 +578,6 @@ function applyPermissions() {
       const d = state.orderDetails.get(o.POID);
       const productName = d ? escapeHTML(getProdName(d.ProductID)) : '-';
       const qty = d ? d.QTY : '-';
-      const custName = escapeHTML(getCustName(o.CustomerID));
       const date = String(o.Date).slice(0,10);
       const unit = d ? getProdUnit(d.ProductID) : 'kg';
 
@@ -595,7 +587,7 @@ function applyPermissions() {
           ${isAdmin() ? `<button class="del-btn sm" data-type="order" data-id="${o.POID}">✕</button>` : ''}
         </div>
         <div style="font-size:13px">${productName} · <strong>${qty} ${unit}</strong></div>
-        <div class="row-sub">${custName} · ${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
+        <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
       </div>`;
     }).join('');
   }
@@ -900,7 +892,7 @@ function applyPermissions() {
       const productID = document.getElementById('o-prod').value;
       const unit = getProdUnit(productID);
 
-      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'done', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
+      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'done', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
       await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
 
       // 创建即扣库存
