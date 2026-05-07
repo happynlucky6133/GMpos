@@ -72,7 +72,7 @@
   function canUseModal(modalId) {
     if (!currentUser) return false;
     const role = currentUser.Role;
-    // 所有 modal 只能 admin 操作，除了进货（purchase）和订单（sales）
+    // 所有 modal 只能 admin 操作，除了进货（purchase）和出货（sales）
     if (role === 'admin') return true;
     if (role === 'purchase') return modalId === 'modal-si';
     if (role === 'sales') return modalId === 'modal-order';
@@ -586,7 +586,7 @@ function applyPermissions() {
   function renderOrders() {
     const container = document.getElementById('orders-list');
     if (state.orders.length === 0) {
-      container.innerHTML = '<div class="empty">暂无 Cash Sales 记录</div>';
+      container.innerHTML = '<div class="empty">暂无 出货 记录</div>';
       return;
     }
 
@@ -865,7 +865,7 @@ function applyPermissions() {
       await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: document.getElementById('o-cust').value, Status: 'pending' });
       await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
 
-      showToast('Cash Sales 已创建！', 'ok');
+      showToast('出货 已创建！', 'ok');
       document.getElementById('o-qty').value = '';
       closeModal();
       auditLog('创建出货', poID, '产品 ' + getProdName(productID) + ' x' + qty + ' ' + unit);
