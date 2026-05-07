@@ -637,7 +637,7 @@ function applyPermissions() {
       });
       if (!res.ok) throw new Error(await res.text());
       const orders = await res.json();
-      let total = 0, count = 0, items = [];
+      let total = 0, count = 0, totalBoxes = 0, items = [];
       for (const o of orders) {
         total += Number(o.TotalAmount || 0);
         count++;
@@ -649,6 +649,7 @@ function applyPermissions() {
           const details = await res2.json();
           for (const d of details) {
             items.push({ POID: o.POID, ProductID: d.ProductID, QTY: d.QTY });
+            totalBoxes += d.QTY;
           }
         }
       }
@@ -669,7 +670,8 @@ function applyPermissions() {
           <span style="font-size:14px;color:var(--text2)">${dateStr}</span>
           <span style="font-size:14px;color:var(--text2)">${count} 单</span>
         </div>
-        <div style="font-size:28px;font-weight:bold;color:var(--blue);margin:12px 0">RM ${total.toFixed(2)}</div>
+        <div style="font-size:28px;font-weight:bold;color:var(--blue);margin:8px 0">RM ${total.toFixed(2)}</div>
+        <div style="font-size:16px;color:var(--text2)">总箱数: ${totalBoxes}</div>
       </div>
       <div class="section-title" style="margin-top:16px">出货明细</div>
       ${detailHtml}`;
