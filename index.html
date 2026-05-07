@@ -89,6 +89,16 @@
       <div id="orders-list"><div class="loading">加载中...</div></div>
     </div>
 
+    <!-- 业绩报表 -->
+    <div class="page" id="page-report">
+      <div class="section-title">业绩报表</div>
+      <div class="search-wrap" style="margin-bottom:12px">
+        <input type="date" id="report-date" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text1);font-size:14px">
+        <button id="btn-report-query" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">查询</button>
+      </div>
+      <div id="report-result"><div class="empty">选择日期查询业绩</div></div>
+    </div>
+
     <!-- 供应商 -->
     <div class="page" id="page-suppliers">
       <div class="search-wrap">
@@ -119,6 +129,7 @@
     <button class="nav-btn" data-page="products"><span class="nav-icon">📦</span>产品</button>
     <button class="nav-btn" data-page="stockin"><span class="nav-icon">📥</span>进货</button>
     <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span>出货</button>
+    <button class="nav-btn" data-page="report"><span class="nav-icon">📊</span>业绩</button>
     <button class="nav-btn" data-page="suppliers"><span class="nav-icon">🏭</span>供应商</button>
     <button class="nav-btn" data-page="customers"><span class="nav-icon">👥</span>客户</button>
     <button class="nav-btn" data-page="audit" id="nav-audit" style="display:none"><span class="nav-icon">📜</span>审计</button>

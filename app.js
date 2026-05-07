@@ -446,6 +446,7 @@ function applyPermissions() {
     else if (page === 'products')  renderProducts();
     else if (page === 'stockin')   renderStockIn();
     else if (page === 'orders')    renderOrders();
+    else if (page === 'report')    initReportPage();
     else if (page === 'suppliers') renderSuppliers();
     else if (page === 'customers') renderCustomers();
     else if (page === 'audit')     loadAuditLogs();
@@ -630,6 +631,77 @@ function applyPermissions() {
         changeOrderStatus(this.dataset.po, this.dataset.status, this.dataset.pid || '', this.dataset.qty || '0');
       });
     });
+  }
+
+  // ============================================================
+  // 业绩报表
+  // ============================================================
+  function initReportPage() {
+    const dateInput = document.getElementById('report-date');
+    // 默认今天
+    const today = new Date().toISOString().slice(0,10);
+    dateInput.value = today;
+    queryReport(today);
+
+    document.getElementById('btn-report-query').onclick = function() {
+      queryReport(dateInput.value);
+    };
+    dateInput.onchange = function() {
+      queryReport(dateInput.value);
+    };
+  }
+
+  async function queryReport(dateStr) {
+    const container = document.getElementById('report-result');
+    if (!dateStr) { container.innerHTML = '<div class="empty">请选择日期</div>'; return; }
+    container.innerHTML = '<div class="loading">查询中...</div>';
+
+    try {
+      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&select=POID,TotalAmount';
+      const res = await fetch(url, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const orders = await res.json();
+      let total = 0, count = 0, items = [];
+      for (const o of orders) {
+        total += Number(o.TotalAmount || 0);
+        count++;
+        const url2 = SB + '/po_details?POID=eq.' + encodeURIComponent(o.POID) + '&select=ProductID,QTY';
+        const res2 = await fetch(url2, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        });
+        if (res2.ok) {
+          const details = await res2.json();
+          for (const d of details) {
+            items.push({ POID: o.POID, ProductID: d.ProductID, QTY: d.QTY });
+          }
+        }
+      }
+
+      if (count === 0) {
+        container.innerHTML = '<div class="empty">该日期没有已完成出货记录</div>';
+        return;
+      }
+
+      let detailHtml = items.map(d => {
+        const name = getProdName(d.ProductID);
+        const unit = getProdUnit(d.ProductID);
+        return `<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">${escapeHTML(name)} · ${d.QTY} ${unit}</div>`;
+      }).join('');
+
+      container.innerHTML = `<div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;color:var(--text2)">${dateStr}</span>
+          <span style="font-size:14px;color:var(--text2)">${count} 单</span>
+        </div>
+        <div style="font-size:28px;font-weight:bold;color:var(--blue);margin:12px 0">RM ${total.toFixed(2)}</div>
+      </div>
+      <div class="section-title" style="margin-top:16px">出货明细</div>
+      ${detailHtml}`;
+    } catch (e) {
+      container.innerHTML = '<div class="empty">查询失败: ' + e.message + '</div>';
+    }
   }
 
   function renderCustomers() {
