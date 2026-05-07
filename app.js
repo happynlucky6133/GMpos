@@ -1277,7 +1277,10 @@ function applyPermissions() {
     document.getElementById('btn-si').textContent = t('confirmStockin');
     const siCancel = document.querySelector('#modal-si .btn-cancel');
     if (siCancel) siCancel.textContent = t('cancel');
-    // 数量 label 由 updateQtyLabels 动态更新
+    const lblSiSup = document.getElementById('lbl-si-supplier');
+    if (lblSiSup) lblSiSup.textContent = t('supplier');
+    const lblSiProd = document.getElementById('lbl-si-product');
+    if (lblSiProd) lblSiProd.textContent = t('product');
 
     // 产品 modal
     const prodTitle = document.querySelector('#modal-prod .modal-title');
@@ -1285,6 +1288,12 @@ function applyPermissions() {
     document.getElementById('btn-prod').textContent = t('addProduct');
     const prodCancel = document.querySelector('#modal-prod .btn-cancel');
     if (prodCancel) prodCancel.textContent = t('cancel');
+    const lblProdName = document.getElementById('lbl-prod-name');
+    if (lblProdName) lblProdName.textContent = t('productName');
+    const lblProdGrade = document.getElementById('lbl-prod-grade');
+    if (lblProdGrade) lblProdGrade.textContent = t('grade');
+    const lblProdUnit = document.getElementById('lbl-prod-unit');
+    if (lblProdUnit) lblProdUnit.textContent = t('unit_pcs');
 
     // 供应商 modal
     const supTitle = document.querySelector('#modal-supplier .modal-title');
@@ -1292,6 +1301,12 @@ function applyPermissions() {
     document.getElementById('btn-supplier').textContent = t('addSupplier');
     const supCancel = document.querySelector('#modal-supplier .btn-cancel');
     if (supCancel) supCancel.textContent = t('cancel');
+    const lblSupName = document.getElementById('lbl-sup-name');
+    if (lblSupName) lblSupName.textContent = t('supplierName');
+    const lblSupPhone = document.getElementById('lbl-sup-phone');
+    if (lblSupPhone) lblSupPhone.textContent = t('phone');
+    const lblSupNote = document.getElementById('lbl-sup-note');
+    if (lblSupNote) lblSupNote.textContent = t('note');
 
     // 出货 modal
     const orderTitle = document.querySelector('#modal-order .modal-title');
@@ -1299,6 +1314,10 @@ function applyPermissions() {
     document.getElementById('btn-order').textContent = t('confirmOrder');
     const orderCancel = document.querySelector('#modal-order .btn-cancel');
     if (orderCancel) orderCancel.textContent = t('cancel');
+    const lblOrderProd = document.getElementById('lbl-order-product');
+    if (lblOrderProd) lblOrderProd.textContent = t('product');
+    const lblOrderAmt = document.getElementById('lbl-order-amount');
+    if (lblOrderAmt) lblOrderAmt.textContent = t('totalAmount');
 
     // 新增用户 modal
     const auTitle = document.querySelector('#modal-adduser .modal-title');
@@ -1306,6 +1325,14 @@ function applyPermissions() {
     document.getElementById('btn-adduser').textContent = t('addUserBtn');
     const auCancel = document.querySelector('#modal-adduser .btn-cancel');
     if (auCancel) auCancel.textContent = t('cancel');
+    const lblAuUser = document.getElementById('lbl-au-user');
+    if (lblAuUser) lblAuUser.textContent = t('username');
+    const lblAuDisplay = document.getElementById('lbl-au-display');
+    if (lblAuDisplay) lblAuDisplay.textContent = t('displayName');
+    const lblAuPass = document.getElementById('lbl-au-pass');
+    if (lblAuPass) lblAuPass.textContent = t('password');
+    const lblAuRole = document.getElementById('lbl-au-role');
+    if (lblAuRole) lblAuRole.textContent = t('role');
 
     // 修改密码 modal
     const cpTitle = document.querySelector('#modal-changepw .modal-title');
@@ -1313,6 +1340,12 @@ function applyPermissions() {
     document.getElementById('btn-changepw').textContent = t('changePwd');
     const cpCancel = document.querySelector('#modal-changepw .btn-cancel');
     if (cpCancel) cpCancel.textContent = t('cancel');
+    const lblCpOld = document.getElementById('lbl-cp-old');
+    if (lblCpOld) lblCpOld.textContent = t('currentPwd');
+    const lblCpNew = document.getElementById('lbl-cp-new');
+    if (lblCpNew) lblCpNew.textContent = t('newPwd');
+    const lblCpConfirm = document.getElementById('lbl-cp-confirm');
+    if (lblCpConfirm) lblCpConfirm.textContent = t('confirmPwd');
 
     // 搜索框 placeholder
     document.getElementById('product-search').placeholder = t('search');

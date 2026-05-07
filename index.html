@@ -141,8 +141,8 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">新增进货</div>
-    <div class="form-group"><label class="form-label">供应商</label><select id="f-sup"></select></div>
-    <div class="form-group"><label class="form-label">产品</label><select id="f-prod"></select></div>
+    <div class="form-group"><label class="form-label" id="lbl-si-supplier">供应商</label><select id="f-sup"></select></div>
+    <div class="form-group"><label class="form-label" id="lbl-si-product">产品</label><select id="f-prod"></select></div>
     <div class="form-group"><label class="form-label" id="f-qty-label">数量</label><input type="number" id="f-qty" placeholder="0" min="1" inputmode="numeric"></div>
     <button class="btn-primary" id="btn-si">确认进货</button>
     <button class="btn-cancel" id="btn-si-cancel">取消</button>
@@ -154,9 +154,9 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">新增产品</div>
-    <div class="form-group"><label class="form-label">产品名称</label><input type="text" id="np-name" placeholder="输入产品名称"></div>
-    <div class="form-group"><label class="form-label">等级</label><input type="text" id="np-grade" placeholder="输入等级（如 A、B、C 或自定义）"></div>
-    <div class="form-group"><label class="form-label">单位</label><select id="np-unit"><option>kg</option><option>box</option><option>pcs</option></select></div>
+    <div class="form-group"><label class="form-label" id="lbl-prod-name">产品名称</label><input type="text" id="np-name" placeholder="输入产品名称"></div>
+    <div class="form-group"><label class="form-label" id="lbl-prod-grade">等级</label><input type="text" id="np-grade" placeholder="输入等级（如 A、B、C 或自定义）"></div>
+    <div class="form-group"><label class="form-label" id="lbl-prod-unit">单位</label><select id="np-unit"><option>kg</option><option>box</option><option>pcs</option></select></div>
     <button class="btn-primary" id="btn-prod">添加产品</button>
     <button class="btn-cancel" id="btn-prod-cancel">取消</button>
   </div>
@@ -167,9 +167,9 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">新增供应商</div>
-    <div class="form-group"><label class="form-label">供应商名称</label><input type="text" id="ns-name" placeholder="输入供应商名称"></div>
-    <div class="form-group"><label class="form-label">联系电话（可选）</label><input type="text" id="ns-phone" placeholder="例：012-3456789" inputmode="tel"></div>
-    <div class="form-group"><label class="form-label">备注（可选）</label><input type="text" id="ns-note" placeholder="地址或其他备注"></div>
+    <div class="form-group"><label class="form-label" id="lbl-sup-name">供应商名称</label><input type="text" id="ns-name" placeholder="输入供应商名称"></div>
+    <div class="form-group"><label class="form-label" id="lbl-sup-phone">联系电话（可选）</label><input type="text" id="ns-phone" placeholder="例：012-3456789" inputmode="tel"></div>
+    <div class="form-group"><label class="form-label" id="lbl-sup-note">备注（可选）</label><input type="text" id="ns-note" placeholder="地址或其他备注"></div>
     <button class="btn-primary" id="btn-supplier">添加供应商</button>
     <button class="btn-cancel" id="btn-supplier-cancel">取消</button>
   </div>
@@ -180,9 +180,9 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">出货</div>
-    <div class="form-group"><label class="form-label">产品</label><select id="o-prod"></select></div>
+    <div class="form-group"><label class="form-label" id="lbl-order-product">产品</label><select id="o-prod"></select></div>
     <div class="form-group"><label class="form-label" id="o-qty-label">数量</label><input type="number" id="o-qty" placeholder="0" min="1" inputmode="numeric"></div>
-    <div class="form-group"><label class="form-label">总金额 (RM)</label><input type="number" id="o-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
+    <div class="form-group"><label class="form-label" id="lbl-order-amount">总金额 (RM)</label><input type="number" id="o-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
     <button class="btn-primary" id="btn-order">出货</button>
     <button class="btn-cancel" id="btn-order-cancel">取消</button>
   </div>
@@ -193,10 +193,10 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">新增用户</div>
-    <div class="form-group"><label class="form-label">用户名</label><input type="text" id="au-user" placeholder="输入登录用户名"></div>
-    <div class="form-group"><label class="form-label">显示名称</label><input type="text" id="au-display" placeholder="输入显示名称"></div>
-    <div class="form-group"><label class="form-label">密码</label><input type="password" id="au-pass" placeholder="输入密码"></div>
-    <div class="form-group"><label class="form-label">角色</label>
+    <div class="form-group"><label class="form-label" id="lbl-au-user">用户名</label><input type="text" id="au-user" placeholder="输入登录用户名"></div>
+    <div class="form-group"><label class="form-label" id="lbl-au-display">显示名称</label><input type="text" id="au-display" placeholder="输入显示名称"></div>
+    <div class="form-group"><label class="form-label" id="lbl-au-pass">密码</label><input type="password" id="au-pass" placeholder="输入密码"></div>
+    <div class="form-group"><label class="form-label" id="lbl-au-role">角色</label>
       <select id="au-role">
         <option value="admin">👑 管理员</option>
         <option value="sales">📋 销售员</option>
@@ -212,9 +212,9 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">修改密码</div>
-    <div class="form-group"><label class="form-label">当前密码</label><input type="password" id="cp-old" placeholder="输入当前密码"></div>
-    <div class="form-group"><label class="form-label">新密码</label><input type="password" id="cp-new" placeholder="输入新密码"></div>
-    <div class="form-group"><label class="form-label">确认新密码</label><input type="password" id="cp-confirm" placeholder="再次输入新密码"></div>
+    <div class="form-group"><label class="form-label" id="lbl-cp-old">当前密码</label><input type="password" id="cp-old" placeholder="输入当前密码"></div>
+    <div class="form-group"><label class="form-label" id="lbl-cp-new">新密码</label><input type="password" id="cp-new" placeholder="输入新密码"></div>
+    <div class="form-group"><label class="form-label" id="lbl-cp-confirm">确认新密码</label><input type="password" id="cp-confirm" placeholder="再次输入新密码"></div>
     <button class="btn-primary" id="btn-changepw">修改密码</button>
     <button class="btn-cancel" id="btn-changepw-cancel">取消</button>
   </div>
