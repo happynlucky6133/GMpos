@@ -50,8 +50,7 @@
     if (!currentUser) return true;
     const role = currentUser.Role;
     if (role === 'admin') return true;
-    if (role === 'sales') return !['stockin', 'suppliers'].includes(page);
-    if (role === 'purchase') return !['orders', 'suppliers'].includes(page);
+    if (role === 'sales') return !['suppliers'].includes(page);
     return true;
   }
 
@@ -62,8 +61,7 @@
     const fabPages = ['stockin', 'products', 'orders', 'suppliers'];
     if (!fabPages.includes(page)) return false;
     if (role === 'admin') return true;
-    if (role === 'sales') return page === 'orders';
-    if (role === 'purchase') return page === 'stockin';
+    if (role === 'sales') return ['orders', 'stockin'].includes(page);
     return false;
   }
 
@@ -72,8 +70,7 @@
     const role = currentUser.Role;
     // 所有 modal 只能 admin 操作，除了进货（purchase）和出货（sales）
     if (role === 'admin') return true;
-    if (role === 'purchase') return modalId === 'modal-si';
-    if (role === 'sales') return modalId === 'modal-order';
+    if (role === 'sales') return ['modal-si', 'modal-order'].includes(modalId);
     return false;
   }
 
