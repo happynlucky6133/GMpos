@@ -15,7 +15,6 @@
   const state = {
     products:    new Map(),
     suppliers:   new Map(),
-    customers:   new Map(),
     stockIns:    [],
     stockInDetails: new Map(),
     orders:      [],
@@ -27,7 +26,6 @@
 
   let prodNameCache = new Map();
   let supNameCache = new Map();
-  let custNameCache = new Map();
 
   // ============================================================
   // 当前用户
@@ -52,8 +50,8 @@
     if (!currentUser) return true;
     const role = currentUser.Role;
     if (role === 'admin') return true;
-    if (role === 'sales') return !['stockin', 'suppliers', 'customers', 'audit'].includes(page);
-    if (role === 'purchase') return !['orders', 'customers', 'audit'].includes(page);
+    if (role === 'sales') return !['stockin', 'suppliers'].includes(page);
+    if (role === 'purchase') return !['orders', 'suppliers'].includes(page);
     return true;
   }
 
@@ -61,7 +59,7 @@
     if (!currentUser) return false;
     const role = currentUser.Role;
     // 只在有对应 modal 的页面显示 + 号
-    const fabPages = ['stockin', 'products', 'orders', 'suppliers', 'customers'];
+    const fabPages = ['stockin', 'products', 'orders', 'suppliers'];
     if (!fabPages.includes(page)) return false;
     if (role === 'admin') return true;
     if (role === 'sales') return page === 'orders';
@@ -87,10 +85,6 @@ function applyPermissions() {
       const page = btn.dataset.page;
       btn.style.display = canShowNav(page) ? '' : 'none';
     });
-
-    // 审计日志页仅 admin 可见
-    const auditNav = document.getElementById('nav-audit');
-    if (auditNav) auditNav.style.display = isAdmin() ? '' : 'none';
 
     // 控制 FAB
     const fab = document.getElementById('fab');
@@ -338,7 +332,6 @@ function applyPermissions() {
 
   function getProdName(id) { return prodNameCache.get(id) || id; }
   function getSupName(id)  { return supNameCache.get(id) || id; }
-  function getCustName(id) { return custNameCache.get(id) || id; }
   function getProd(id)     { return state.products.get(id); }
   function getProdUnit(id) {
     const p = state.products.get(id);
@@ -792,7 +785,6 @@ function applyPermissions() {
       showToast('进货成功！', 'ok');
       document.getElementById('f-qty').value = '';
       closeModal();
-      auditLog('新增进货', stockInID, '产品 ' + getProdName(productID) + ' +' + qty + ' ' + unit);
       await loadAll();
     } catch (e) {
       showToast('提交失败: ' + e.message, 'err');
@@ -822,7 +814,6 @@ function applyPermissions() {
       showToast('产品已添加！', 'ok');
       document.getElementById('np-name').value = '';
       closeModal();
-      auditLog('新增产品', newPID, name);
       await loadAll();
     } catch (e) {
       showToast('提交失败: ' + e.message, 'err');
@@ -884,7 +875,6 @@ function applyPermissions() {
       document.getElementById('ns-phone').value = '';
       document.getElementById('ns-note').value = '';
       closeModal();
-      auditLog('新增供应商', newSID, name);
       await loadAll();
     } catch (e) {
       showToast('提交失败: ' + e.message, 'err');
@@ -923,7 +913,6 @@ function applyPermissions() {
       showToast('出货 已创建！', 'ok');
       document.getElementById('o-qty').value = '';
       closeModal();
-      auditLog('创建出货', poID, '产品 ' + getProdName(productID) + ' x' + qty + ' ' + unit);
       await loadAll();
     } catch (e) {
       showToast('提交失败: ' + e.message, 'err');
@@ -949,21 +938,14 @@ function applyPermissions() {
         try {
           if (type === 'product') {
             await sbDelete('products', 'ProductID', id);
-            auditLog('删除产品', id, '');
           } else if (type === 'supplier') {
             await sbDelete('suppliers', 'SupplierID', id);
-            auditLog('删除供应商', id, '');
-          } else if (type === 'customer') {
-            await sbDelete('customers', 'CustomerID', id);
-            auditLog('删除客户', id, '');
           } else if (type === 'stockin') {
             await sbDelete('stock_ins', 'StockInID', id);
             await sbDelete('stock_in_details', 'StockInID', id).catch(() => {});
-            auditLog('删除进货记录', id, '');
           } else if (type === 'order') {
             await sbDelete('purchase_orders', 'POID', id);
             await sbDelete('po_details', 'POID', id).catch(() => {});
-            auditLog('删除出货', id, '');
           }
           showToast('删除成功', 'ok');
           await loadAll();
@@ -999,7 +981,6 @@ function applyPermissions() {
       document.getElementById('au-display').value = '';
       document.getElementById('au-pass').value = '';
       closeModal();
-      auditLog('新增用户', username, '角色 ' + role + ', 名称 ' + display);
     } catch (e) {
       showToast('添加失败: ' + e.message, 'err');
     }
