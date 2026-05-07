@@ -616,11 +616,11 @@ function applyPermissions() {
     const oLabel = document.getElementById('o-qty-label');
     if (fProd && fLabel) {
       const unit = getProdUnit(fProd.value);
-      fLabel.textContent = '数量 (' + unit + ')';
+      fLabel.textContent = t('qty') + ' (' + unit + ')';
     }
     if (oProd && oLabel) {
       const unit = getProdUnit(oProd.value);
-      oLabel.textContent = '数量 (' + unit + ')';
+      oLabel.textContent = t('qty') + ' (' + unit + ')';
     }
   }
 
@@ -1264,6 +1264,7 @@ function applyPermissions() {
     document.querySelectorAll('.stat-card .stat-label')[0].textContent = t('totalProducts');
     document.querySelectorAll('.stat-card .stat-label')[1].textContent = t('totalStock');
     document.querySelectorAll('.stat-card .stat-label')[2].textContent = t('stockinRecords');
+    document.querySelectorAll('.stat-card .stat-label')[3].textContent = t('suppliers');
 
     // section titles
     document.querySelectorAll('.section-title').forEach(el => {
@@ -1333,6 +1334,13 @@ function applyPermissions() {
     if (lblAuPass) lblAuPass.textContent = t('password');
     const lblAuRole = document.getElementById('lbl-au-role');
     if (lblAuRole) lblAuRole.textContent = t('role');
+    // 角色选项
+    const auRole = document.getElementById('au-role');
+    if (auRole) {
+      const opts = auRole.options;
+      if (opts[0]) opts[0].text = '👑 ' + t('admin');
+      if (opts[1]) opts[1].text = '📋 ' + t('sales');
+    }
 
     // 修改密码 modal
     const cpTitle = document.querySelector('#modal-changepw .modal-title');
