@@ -3,6 +3,218 @@
   'use strict';
 
   // ============================================================
+  // 国际化
+  // ============================================================
+  const LANG = {
+    zh: {
+      // 登录
+      login: '登录',
+      username: '用户名',
+      password: '密码',
+      loginSub: '请登录以继续',
+      loginBtn: '登录',
+      loginErr: '请输入用户名和密码',
+      userNotFound: '用户不存在',
+      wrongPwd: '密码错误',
+      loggingIn: '登录中...',
+      welcome: '欢迎，',
+      logout: '退出',
+      // 导航
+      home: '主页',
+      products: '产品',
+      stockin: '进货',
+      orders: '出货',
+      report: '业绩',
+      suppliers: '供应商',
+      // 主页
+      totalProducts: '产品总类',
+      totalStock: '总库存',
+      stockinRecords: '进货记录',
+      stockOverview: '库存概览',
+      recentStockin: '最近进货',
+      noProducts: '暂无产品',
+      noStockin: '暂无进货记录',
+      grade: '等级',
+      unit_pcs: '件',
+      search: '搜索',
+      noProductFound: '没有找到产品',
+      noSupplier: '暂无供应商',
+      sufficient: '充足',
+      medium: '偏低',
+      low: '告急',
+      loading: '加载中...',
+      synced: '已同步',
+      loadFailed: '加载失败',
+      // 进货
+      newStockin: '新增进货',
+      confirmStockin: '确认进货',
+      submitting: '提交中...',
+      stockinSuccess: '进货成功！',
+      qty: '数量',
+      cancel: '取消',
+      supplier: '供应商',
+      product: '产品',
+      searchDO: '搜索 DO 号码...',
+      noPermission: '无权操作',
+      submitFail: '提交失败: ',
+      // 出货
+      newOrder: '出货',
+      confirmOrder: '出货',
+      ordering: '出货中...',
+      orderSuccess: '出货 已创建！',
+      searchInvoice: '搜索 Invoice No...',
+      totalAmount: '总金额 (RM)',
+      noOrders: '暂无出货记录',
+      // 产品
+      newProduct: '新增产品',
+      addProduct: '添加产品',
+      adding: '添加中...',
+      productAdded: '产品已添加！',
+      productName: '产品名称',
+      // 供应商
+      newSupplier: '新增供应商',
+      addSupplier: '添加供应商',
+      supplierAdded: '供应商已添加！',
+      supplierName: '供应商名称',
+      phone: '联系电话（可选）',
+      note: '备注（可选）',
+      // 业绩
+      reportTitle: '业绩报表',
+      query: '查询',
+      selectDate: '选择日期查询业绩',
+      orderDetail: '出货明细',
+      totalBoxes: '总箱数',
+      noOrdersDate: '该日期没有出货记录',
+      queryFail: '查询失败: ',
+      orders_n: '单',
+      // 通用
+      delete: '删除',
+      confirmDelete: '确定要删除吗？此操作不可撤销。',
+      deleteSuccess: '删除成功',
+      deleteFail: '删除失败: ',
+      // 用户管理
+      addUser: '新增用户',
+      addUserBtn: '添加用户',
+      addingUser: '添加中...',
+      userAdded: ' 已添加！',
+      userExists: '用户名已存在',
+      displayName: '显示名称',
+      role: '角色',
+      admin: '管理员',
+      sales: '销售员',
+      changePwd: '修改密码',
+      currentPwd: '当前密码',
+      newPwd: '新密码',
+      confirmPwd: '确认新密码',
+      pwdChanged: '密码修改成功！',
+      pwdMismatch: '两次新密码不一致',
+      wrongCurrentPwd: '当前密码错误',
+      fillAll: '请填写所有字段',
+      // 印尼文专用
+      langName: '中文'
+    },
+    id: {
+      login: 'Masuk',
+      username: 'Nama Pengguna',
+      password: 'Kata Sandi',
+      loginSub: 'Silakan masuk untuk melanjutkan',
+      loginBtn: 'Masuk',
+      loginErr: 'Masukkan nama pengguna dan kata sandi',
+      userNotFound: 'Pengguna tidak ditemukan',
+      wrongPwd: 'Kata sandi salah',
+      loggingIn: 'Memproses...',
+      welcome: 'Selamat datang, ',
+      logout: 'Keluar',
+      home: 'Beranda',
+      products: 'Produk',
+      stockin: 'Stok Masuk',
+      orders: 'Stok Keluar',
+      report: 'Kinerja',
+      suppliers: 'Pemasok',
+      totalProducts: 'Total Produk',
+      totalStock: 'Total Stok',
+      stockinRecords: 'Catatan Masuk',
+      stockOverview: 'Ringkasan Stok',
+      recentStockin: 'Terbaru Masuk',
+      noProducts: 'Belum ada produk',
+      noStockin: 'Belum ada catatan masuk',
+      grade: 'Grade',
+      unit_pcs: 'item',
+      search: 'Cari',
+      noProductFound: 'Produk tidak ditemukan',
+      noSupplier: 'Belum ada pemasok',
+      sufficient: 'Tersedia',
+      medium: 'Sedang',
+      low: 'Menipis',
+      loading: 'Memuat...',
+      synced: 'Sinkron',
+      loadFailed: 'Gagal muat',
+      newStockin: 'Tambah Stok Masuk',
+      confirmStockin: 'Simpan Masuk',
+      submitting: 'Mengirim...',
+      stockinSuccess: 'Stok masuk berhasil!',
+      qty: 'Jumlah',
+      cancel: 'Batal',
+      supplier: 'Pemasok',
+      product: 'Produk',
+      searchDO: 'Cari DO...',
+      noPermission: 'Tidak ada akses',
+      submitFail: 'Gagal kirim: ',
+      newOrder: 'Stok Keluar',
+      confirmOrder: 'Stok Keluar',
+      ordering: 'Memproses...',
+      orderSuccess: 'Stok keluar berhasil!',
+      searchInvoice: 'Cari Invoice...',
+      totalAmount: 'Total (RM)',
+      noOrders: 'Belum ada catatan keluar',
+      newProduct: 'Tambah Produk',
+      addProduct: 'Tambah Produk',
+      adding: 'Menambah...',
+      productAdded: 'Produk ditambahkan!',
+      productName: 'Nama Produk',
+      newSupplier: 'Tambah Pemasok',
+      addSupplier: 'Tambah Pemasok',
+      supplierAdded: 'Pemasok ditambahkan!',
+      supplierName: 'Nama Pemasok',
+      phone: 'Telepon (opsional)',
+      note: 'Catatan (opsional)',
+      reportTitle: 'Laporan Kinerja',
+      query: 'Cari',
+      selectDate: 'Pilih tanggal untuk melihat laporan',
+      orderDetail: 'Detail Stok Keluar',
+      totalBoxes: 'Total Box',
+      noOrdersDate: 'Tidak ada catatan pada tanggal ini',
+      queryFail: 'Gagal cari: ',
+      orders_n: ' pesanan',
+      delete: 'Hapus',
+      confirmDelete: 'Yakin hapus? Tindakan ini tidak bisa dibatalkan.',
+      deleteSuccess: 'Berhasil dihapus',
+      deleteFail: 'Gagal hapus: ',
+      addUser: 'Tambah Pengguna',
+      addUserBtn: 'Tambah Pengguna',
+      addingUser: 'Menambah...',
+      userAdded: ' ditambahkan!',
+      userExists: 'Nama pengguna sudah ada',
+      displayName: 'Nama Tampilan',
+      role: 'Peran',
+      admin: 'Admin',
+      sales: 'Sales',
+      changePwd: 'Ganti Kata Sandi',
+      currentPwd: 'Kata Sandi Saat Ini',
+      newPwd: 'Kata Sandi Baru',
+      confirmPwd: 'Konfirmasi Kata Sandi',
+      pwdChanged: 'Kata sandi berhasil diganti!',
+      pwdMismatch: 'Kata sandi baru tidak cocok',
+      wrongCurrentPwd: 'Kata sandi saat ini salah',
+      fillAll: 'Isi semua bidang',
+      langName: 'Indonesia'
+    }
+  };
+
+  let currentLang = localStorage.getItem('gmpos_lang') || 'zh';
+  function t(key) { return (LANG[currentLang] || LANG.zh)[key] || key; }
+
+  // ============================================================
   // Supabase 配置
   // ============================================================
   const SUPABASE_URL = 'https://mxiiolycxbhrgpssdhtn.supabase.co';
@@ -89,7 +301,7 @@ function applyPermissions() {
 
     // 用户显示
     const ud = document.getElementById('user-display');
-    ud.textContent = '👤 ' + currentUser.DisplayName + ' (退出)';
+    ud.textContent = '👤 ' + currentUser.DisplayName + ' (' + t('logout') + ')';
     ud.style.display = 'inline';
 
     // admin 专用按钮（👤+ 添加用户）
@@ -177,7 +389,7 @@ function applyPermissions() {
     const password = document.getElementById('login-pass').value.trim();
     const errEl = document.getElementById('login-error');
     if (!username || !password) {
-      errEl.textContent = '请输入用户名和密码';
+    errEl.textContent = t('loginErr');
       errEl.style.display = 'block';
       return;
     }
@@ -185,22 +397,22 @@ function applyPermissions() {
 
     const btn = document.getElementById('login-btn');
     btn.disabled = true;
-    btn.textContent = '登录中...';
+    btn.textContent = t('loggingIn');
     try {
       const users = await sbGetFiltered('users', 'Username', username, { select: '*' });
       if (!users || users.length === 0) {
-        errEl.textContent = '用户不存在';
+        errEl.textContent = t('userNotFound');
         errEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = '登录';
+        btn.textContent = t('loginBtn');
         return;
       }
       const user = users[0];
       if (user.Password !== password) {
-        errEl.textContent = '密码错误';
+        errEl.textContent = t('wrongPwd');
         errEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = '登录';
+        btn.textContent = t('loginBtn');
         return;
       }
 
@@ -216,14 +428,14 @@ function applyPermissions() {
       document.getElementById('app-main').style.display = 'flex';
 
       applyPermissions();
-      showToast('欢迎，' + currentUser.DisplayName + '！', 'ok');
+      showToast(t('welcome') + currentUser.DisplayName + '！', 'ok');
       loadAll();
     } catch (e) {
-      errEl.textContent = '登录失败: ' + e.message;
+      errEl.textContent = t('submitFail') + e.message;
       errEl.style.display = 'block';
     }
     btn.disabled = false;
-    btn.textContent = '登录';
+    btn.textContent = t('loginBtn');
   }
 
   function doLogout() {
@@ -237,7 +449,7 @@ function applyPermissions() {
     document.querySelectorAll('.nav-btn').forEach(b => b.style.display = '');
     document.getElementById('fab').style.display = 'none';
     document.getElementById('user-display').style.display = 'none';
-    showToast('已退出登录', 'ok');
+    showToast(t('logout'), 'ok');
   }
 
   // ============================================================
@@ -248,7 +460,7 @@ function applyPermissions() {
     state.loading = true;
     const btn = document.getElementById('sync-btn');
     btn.disabled = true;
-    btn.textContent = '加载中...';
+    btn.textContent = t('loading');
 
     try {
       const [products, suppliers, customers, stockIns, stockInDetails, orders, orderDetails] = await Promise.all([
@@ -265,11 +477,11 @@ function applyPermissions() {
       populateSelects();
       renderCurrentPage();
 
-      const t = new Date();
-      document.getElementById('sync-time').textContent = '已同步 ' + t.toTimeString().slice(0,5);
+      const now = new Date();
+      document.getElementById('sync-time').textContent = t('synced') + ' ' + now.toTimeString().slice(0,5);
     } catch (e) {
-      showToast('加载失败: ' + e.message, 'err');
-      document.getElementById('sync-time').textContent = '加载失败';
+      showToast(t('loadFailed') + ': ' + e.message, 'err');
+      document.getElementById('sync-time').textContent = t('loadFailed');
     }
 
     btn.disabled = false;
@@ -330,9 +542,9 @@ function applyPermissions() {
 
   function stockBadge(n) {
     n = Number(n);
-    if (n > 200) return '<span class="badge bg">充足</span>';
-    if (n > 50)  return '<span class="badge ba">偏低</span>';
-    return '<span class="badge br">告急</span>';
+    if (n > 200) return '<span class="badge bg">' + t('sufficient') + '</span>';
+    if (n > 50)  return '<span class="badge ba">' + t('medium') + '</span>';
+    return '<span class="badge br">' + t('low') + '</span>';
   }
 
   let toastTimer = null;
@@ -440,19 +652,19 @@ function applyPermissions() {
       .reduce((a, p) => a + Number(p.StockBalance || 0), 0);
 
     document.getElementById('s-products').textContent = state.products.size;
-    document.getElementById('s-stock').innerHTML = total + ' <span class="stat-unit">件</span>';
+    document.getElementById('s-stock').innerHTML = total + ' <span class="stat-unit">' + t('unit_pcs') + '</span>';
     document.getElementById('s-stockin').textContent = state.stockIns.length;
     document.getElementById('s-suppliers').textContent = state.suppliers.size;
 
     const prodContainer = document.getElementById('dash-products');
     if (state.products.size === 0) {
-      prodContainer.innerHTML = '<div class="empty">暂无产品</div>';
+      prodContainer.innerHTML = '<div class="empty">' + t('noProducts') + '</div>';
     } else {
       prodContainer.innerHTML = Array.from(state.products.values()).map(p =>
         `<div class="card row-flex">
           <div>
             <div class="row-title">${escapeHTML(p.ProductName)}</div>
-            <div class="row-sub">等级 ${p.Grade || '-'} · ${stockBadge(p.StockBalance)}</div>
+            <div class="row-sub">${t('grade')} ${p.Grade || '-'} · ${stockBadge(p.StockBalance)}</div>
           </div>
           <div>
             <div class="stock-num">${Number(p.StockBalance || 0)}</div>
@@ -465,7 +677,7 @@ function applyPermissions() {
     const recentContainer = document.getElementById('dash-recent');
     const recent = state.stockIns.slice(-3).reverse();
     if (recent.length === 0) {
-      recentContainer.innerHTML = '<div class="empty">暂无进货记录</div>';
+      recentContainer.innerHTML = '<div class="empty">' + t('noStockin') + '</div>';
     } else {
       recentContainer.innerHTML = recent.map(s => {
         const d = state.stockInDetails.get(s.StockInID);
@@ -491,14 +703,14 @@ function applyPermissions() {
       .filter(p => p.ProductName.toLowerCase().includes(q));
     const container = document.getElementById('product-list');
     if (list.length === 0) {
-      container.innerHTML = '<div class="empty">没有找到产品</div>';
+      container.innerHTML = '<div class="empty">' + t('noProductFound') + '</div>';
       return;
     }
     container.innerHTML = list.map(p =>
       `<div class="card row-flex">
         <div>
           <div class="row-title">${escapeHTML(p.ProductName)}</div>
-          <div class="row-sub">${p.ProductID} · 等级 ${p.Grade || '-'} · ${stockBadge(p.StockBalance)}</div>
+          <div class="row-sub">${p.ProductID} · ${t('grade')} ${p.Grade || '-'} · ${stockBadge(p.StockBalance)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="text-align:right">
@@ -518,7 +730,7 @@ function applyPermissions() {
       .filter(s => (s.SupplierName || '').toLowerCase().includes(q));
     const container = document.getElementById('supplier-list');
     if (list.length === 0) {
-      container.innerHTML = '<div class="empty">暂无供应商</div>';
+      container.innerHTML = '<div class="empty">' + t('noSupplier') + '</div>';
       return;
     }
     container.innerHTML = list.map(s => {
@@ -544,7 +756,7 @@ function applyPermissions() {
     const container = document.getElementById('stockin-list');
     const list = state.stockIns.filter(s => s.StockInID.toLowerCase().includes(q));
     if (list.length === 0) {
-      container.innerHTML = '<div class="empty">暂无进货记录</div>';
+      container.innerHTML = '<div class="empty">' + t('noStockin') + '</div>';
       return;
     }
     container.innerHTML = [...list].reverse().map(s => {
@@ -571,7 +783,7 @@ function applyPermissions() {
     const container = document.getElementById('orders-list');
     const list = state.orders.filter(o => o.POID.toLowerCase().includes(q));
     if (list.length === 0) {
-      container.innerHTML = '<div class="empty">暂无出货记录</div>';
+      container.innerHTML = '<div class="empty">' + t('noOrders') + '</div>';
       return;
     }
 
@@ -613,8 +825,8 @@ function applyPermissions() {
 
   async function queryReport(dateStr) {
     const container = document.getElementById('report-result');
-    if (!dateStr) { container.innerHTML = '<div class="empty">请选择日期</div>'; return; }
-    container.innerHTML = '<div class="loading">查询中...</div>';
+    if (!dateStr) { container.innerHTML = '<div class="empty">' + t('selectDate') + '</div>'; return; }
+    container.innerHTML = '<div class="loading">' + t('loading') + '</div>';
 
     try {
       const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&select=POID,TotalAmount';
@@ -641,7 +853,7 @@ function applyPermissions() {
       }
 
       if (count === 0) {
-        container.innerHTML = '<div class="empty">该日期没有出货记录</div>';
+        container.innerHTML = '<div class="empty">' + t('noOrdersDate') + '</div>';
         return;
       }
 
@@ -654,15 +866,15 @@ function applyPermissions() {
       container.innerHTML = `<div class="card" style="margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:14px;color:var(--text2)">${dateStr}</span>
-          <span style="font-size:14px;color:var(--text2)">${count} 单</span>
+          <span style="font-size:14px;color:var(--text2)">${count} ${t('orders_n')}</span>
         </div>
         <div style="font-size:28px;font-weight:bold;color:var(--blue);margin:8px 0">RM ${total.toFixed(2)}</div>
-        <div style="font-size:16px;color:var(--text2)">总箱数: ${totalBoxes}</div>
+        <div style="font-size:16px;color:var(--text2)">${t('totalBoxes')}: ${totalBoxes}</div>
       </div>
-      <div class="section-title" style="margin-top:16px">出货明细</div>
+      <div class="section-title" style="margin-top:16px">${t('orderDetail')}</div>
       ${detailHtml}`;
     } catch (e) {
-      container.innerHTML = '<div class="empty">查询失败: ' + e.message + '</div>';
+      container.innerHTML = '<div class="empty">' + t('queryFail') + e.message + '</div>';
     }
   }
 
@@ -752,12 +964,12 @@ function applyPermissions() {
   // 表单提交
   // ============================================================
   async function submitStockIn() {
-    if (!canUseModal('modal-si')) { showToast('无权操作', 'err'); return; }
+    if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
     const qty = parseInt(document.getElementById('f-qty').value);
-    if (!qty || qty < 1) { showToast('请输入正确数量', 'err'); return; }
+    if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
     const btn = document.getElementById('btn-si');
     btn.disabled = true;
-    btn.textContent = '提交中...';
+    btn.textContent = t('submitting');
     try {
       const now = new Date();
       const dateStr = now.toISOString().slice(0,10);
@@ -777,24 +989,24 @@ function applyPermissions() {
         await sbPatch('products', 'ProductID', productID, { StockBalance: (Number(prod.StockBalance) || 0) + qty });
       }
 
-      showToast('进货成功！', 'ok');
+      showToast(t('stockinSuccess'), 'ok');
       document.getElementById('f-qty').value = '';
       closeModal();
       await loadAll();
     } catch (e) {
-      showToast('提交失败: ' + e.message, 'err');
+      showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '确认进货';
+    btn.textContent = t('confirmStockin');
   }
 
   async function submitProduct() {
-    if (!canUseModal('modal-prod')) { showToast('无权操作', 'err'); return; }
+    if (!canUseModal('modal-prod')) { showToast(t('noPermission'), 'err'); return; }
     const name = document.getElementById('np-name').value.trim();
-    if (!name) { showToast('请输入产品名称', 'err'); return; }
+    if (!name) { showToast(t('submitFail') + t('productName'), 'err'); return; }
     const btn = document.getElementById('btn-prod');
     btn.disabled = true;
-    btn.textContent = '添加中...';
+    btn.textContent = t('adding');
     try {
       const ts = Date.now().toString(36).slice(-4);
       const rnd = Math.random().toString(36).slice(2, 4);
@@ -806,24 +1018,24 @@ function applyPermissions() {
         Unit: document.getElementById('np-unit').value,
         StockBalance: 0
       });
-      showToast('产品已添加！', 'ok');
+      showToast(t('productAdded'), 'ok');
       document.getElementById('np-name').value = '';
       closeModal();
       await loadAll();
     } catch (e) {
-      showToast('提交失败: ' + e.message, 'err');
+      showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '添加产品';
+    btn.textContent = t('addProduct');
   }
 
-  async function submitCustomer() {
-    if (!canUseModal('modal-customer')) { showToast('无权操作', 'err'); return; }
-    const name = document.getElementById('nc-name').value.trim();
-    if (!name) { showToast('请输入客户名称', 'err'); return; }
-    const btn = document.getElementById('btn-customer');
+  async function submitSupplier() {
+    if (!canUseModal('modal-supplier')) { showToast(t('noPermission'), 'err'); return; }
+    const name = document.getElementById('ns-name').value.trim();
+    if (!name) { showToast(t('submitFail') + t('supplierName'), 'err'); return; }
+    const btn = document.getElementById('btn-supplier');
     btn.disabled = true;
-    btn.textContent = '添加中...';
+    btn.textContent = t('submitting');
     try {
       const ts = Date.now().toString(36).slice(-4).toUpperCase();
       const rnd = Math.random().toString(36).slice(2, 4).toUpperCase();
@@ -865,26 +1077,26 @@ function applyPermissions() {
         Phone: document.getElementById('ns-phone').value.trim(),
         Note: document.getElementById('ns-note').value.trim()
       });
-      showToast('供应商已添加！', 'ok');
+      showToast(t('supplierAdded'), 'ok');
       document.getElementById('ns-name').value = '';
       document.getElementById('ns-phone').value = '';
       document.getElementById('ns-note').value = '';
       closeModal();
       await loadAll();
     } catch (e) {
-      showToast('提交失败: ' + e.message, 'err');
+      showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '添加供应商';
+    btn.textContent = t('addSupplier');
   }
 
   async function submitOrder() {
-    if (!canUseModal('modal-order')) { showToast('无权操作', 'err'); return; }
+    if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
     const qty = parseInt(document.getElementById('o-qty').value);
-    if (!qty || qty < 1) { showToast('请输入正确数量', 'err'); return; }
+    if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
     const btn = document.getElementById('btn-order');
     btn.disabled = true;
-    btn.textContent = '出货中...';
+    btn.textContent = t('ordering');
     try {
       const now = new Date();
       const dateStr = now.toISOString().slice(0,10);
@@ -905,15 +1117,15 @@ function applyPermissions() {
         await sbPatch('products', 'ProductID', productID, { StockBalance: newBalance });
       }
 
-      showToast('出货 已创建！', 'ok');
+      showToast(t('orderSuccess'), 'ok');
       document.getElementById('o-qty').value = '';
       closeModal();
       await loadAll();
     } catch (e) {
-      showToast('提交失败: ' + e.message, 'err');
+      showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '创建出货';
+    btn.textContent = t('confirmOrder');
   }
 
   // ============================================================
@@ -922,8 +1134,8 @@ function applyPermissions() {
   function attachDeleteHandlers(container) {
     container.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', async function() {
-        if (!isAdmin()) { showToast('无权操作', 'err'); return; }
-        if (!confirm('确定要删除吗？此操作不可撤销。')) return;
+        if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+        if (!confirm(t('confirmDelete'))) return;
 
         const type = this.dataset.type;
         const id = this.dataset.id;
@@ -942,10 +1154,10 @@ function applyPermissions() {
             await sbDelete('purchase_orders', 'POID', id);
             await sbDelete('po_details', 'POID', id).catch(() => {});
           }
-          showToast('删除成功', 'ok');
+          showToast(t('deleteSuccess'), 'ok');
           await loadAll();
         } catch (e) {
-          showToast('删除失败: ' + e.message, 'err');
+          showToast(t('deleteFail') + e.message, 'err');
           this.disabled = false;
           this.textContent = '✕';
         }
@@ -957,30 +1169,30 @@ function applyPermissions() {
   // 新增用户（仅 admin）
   // ============================================================
   async function submitAddUser() {
-    if (!isAdmin()) { showToast('无权操作', 'err'); return; }
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
     const username = document.getElementById('au-user').value.trim();
     const display = document.getElementById('au-display').value.trim();
     const password = document.getElementById('au-pass').value.trim();
     const role = document.getElementById('au-role').value;
-    if (!username || !display || !password) { showToast('请填写所有字段', 'err'); return; }
+    if (!username || !display || !password) { showToast(t('fillAll'), 'err'); return; }
     const btn = document.getElementById('btn-adduser');
     btn.disabled = true;
-    btn.textContent = '添加中...';
+    btn.textContent = t('addingUser');
     try {
       // 检查用户名是否已存在
       const exist = await sbGetFiltered('users', 'Username', username, { select: 'Username' });
-      if (exist && exist.length > 0) { showToast('用户名已存在', 'err'); btn.disabled = false; btn.textContent = '添加用户'; return; }
+      if (exist && exist.length > 0) { showToast(t('userExists'), 'err'); btn.disabled = false; btn.textContent = t('addUserBtn'); return; }
       await sbPost('users', { Username: username, DisplayName: display, Password: password, Role: role });
-      showToast('用户 ' + display + ' 已添加！', 'ok');
+      showToast(display + t('userAdded'), 'ok');
       document.getElementById('au-user').value = '';
       document.getElementById('au-display').value = '';
       document.getElementById('au-pass').value = '';
       closeModal();
     } catch (e) {
-      showToast('添加失败: ' + e.message, 'err');
+      showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '添加用户';
+    btn.textContent = t('addUserBtn');
   }
 
   // ============================================================
@@ -990,33 +1202,149 @@ function applyPermissions() {
     const oldPw = document.getElementById('cp-old').value.trim();
     const newPw = document.getElementById('cp-new').value.trim();
     const confirmPw = document.getElementById('cp-confirm').value.trim();
-    if (!oldPw || !newPw || !confirmPw) { showToast('请填写所有字段', 'err'); return; }
-    if (newPw !== confirmPw) { showToast('两次新密码不一致', 'err'); return; }
+    if (!oldPw || !newPw || !confirmPw) { showToast(t('fillAll'), 'err'); return; }
+    if (newPw !== confirmPw) { showToast(t('pwdMismatch'), 'err'); return; }
     const btn = document.getElementById('btn-changepw');
     btn.disabled = true;
-    btn.textContent = '修改中...';
+    btn.textContent = t('submitting');
     try {
       // 验证当前密码
       const users = await sbGetFiltered('users', 'Username', currentUser.Username, { select: '*' });
-      if (!users || users.length === 0) { showToast('用户不存在', 'err'); btn.disabled = false; btn.textContent = '修改密码'; return; }
-      if (users[0].Password !== oldPw) { showToast('当前密码错误', 'err'); btn.disabled = false; btn.textContent = '修改密码'; return; }
+      if (!users || users.length === 0) { showToast(t('userNotFound'), 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
+      if (users[0].Password !== oldPw) { showToast(t('wrongCurrentPwd'), 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
       await sbPatch('users', 'Username', currentUser.Username, { Password: newPw });
-      showToast('密码修改成功！', 'ok');
+      showToast(t('pwdChanged'), 'ok');
       document.getElementById('cp-old').value = '';
       document.getElementById('cp-new').value = '';
       document.getElementById('cp-confirm').value = '';
       closeModal();
     } catch (e) {
-      showToast('修改失败: ' + e.message, 'err');
+      showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '修改密码';
+    btn.textContent = t('changePwd');
+  }
+
+  // ============================================================
+  // 国际化 - 应用语言
+  // ============================================================
+  function applyLang() {
+    // 登录页
+    document.getElementById('label-user').textContent = t('username');
+    document.getElementById('label-pass').textContent = t('password');
+    document.getElementById('login-sub').textContent = t('loginSub');
+    document.getElementById('login-btn').textContent = t('loginBtn');
+    document.getElementById('login-user').placeholder = t('username');
+
+    // 更新语言按钮高亮
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      b.style.opacity = b.dataset.lang === currentLang ? '1' : '0.5';
+    });
+
+    // 导航按钮
+    const navMap = {
+      dashboard: t('home'),
+      products: t('products'),
+      stockin: t('stockin'),
+      orders: t('orders'),
+      report: t('report'),
+      suppliers: t('suppliers')
+    };
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      const page = btn.dataset.page;
+      if (navMap[page]) {
+        const icon = btn.querySelector('.nav-icon');
+        if (icon) btn.innerHTML = icon.outerHTML + navMap[page];
+      }
+    });
+
+    // 主页 stat 标签
+    document.getElementById('s-products').previousElementSibling.textContent = t('totalProducts');
+    // 找到 stat-label 元素
+    document.querySelectorAll('.stat-card .stat-label')[0].textContent = t('totalProducts');
+    document.querySelectorAll('.stat-card .stat-label')[1].textContent = t('totalStock');
+    document.querySelectorAll('.stat-card .stat-label')[2].textContent = t('stockinRecords');
+
+    // section titles
+    document.querySelectorAll('.section-title').forEach(el => {
+      if (el.textContent === '库存概览' || el.textContent === 'Ringkasan Stok') el.textContent = t('stockOverview');
+      if (el.textContent === '最近进货' || el.textContent === 'Terbaru Masuk') el.textContent = t('recentStockin');
+    });
+
+    // 进货 modal
+    const siTitle = document.querySelector('#modal-si .modal-title');
+    if (siTitle) siTitle.textContent = t('newStockin');
+    document.getElementById('btn-si').textContent = t('confirmStockin');
+    const siCancel = document.querySelector('#modal-si .btn-cancel');
+    if (siCancel) siCancel.textContent = t('cancel');
+    // 数量 label 由 updateQtyLabels 动态更新
+
+    // 产品 modal
+    const prodTitle = document.querySelector('#modal-prod .modal-title');
+    if (prodTitle) prodTitle.textContent = t('newProduct');
+    document.getElementById('btn-prod').textContent = t('addProduct');
+    const prodCancel = document.querySelector('#modal-prod .btn-cancel');
+    if (prodCancel) prodCancel.textContent = t('cancel');
+
+    // 供应商 modal
+    const supTitle = document.querySelector('#modal-supplier .modal-title');
+    if (supTitle) supTitle.textContent = t('newSupplier');
+    document.getElementById('btn-supplier').textContent = t('addSupplier');
+    const supCancel = document.querySelector('#modal-supplier .btn-cancel');
+    if (supCancel) supCancel.textContent = t('cancel');
+
+    // 出货 modal
+    const orderTitle = document.querySelector('#modal-order .modal-title');
+    if (orderTitle) orderTitle.textContent = t('newOrder');
+    document.getElementById('btn-order').textContent = t('confirmOrder');
+    const orderCancel = document.querySelector('#modal-order .btn-cancel');
+    if (orderCancel) orderCancel.textContent = t('cancel');
+
+    // 新增用户 modal
+    const auTitle = document.querySelector('#modal-adduser .modal-title');
+    if (auTitle) auTitle.textContent = t('addUser');
+    document.getElementById('btn-adduser').textContent = t('addUserBtn');
+    const auCancel = document.querySelector('#modal-adduser .btn-cancel');
+    if (auCancel) auCancel.textContent = t('cancel');
+
+    // 修改密码 modal
+    const cpTitle = document.querySelector('#modal-changepw .modal-title');
+    if (cpTitle) cpTitle.textContent = t('changePwd');
+    document.getElementById('btn-changepw').textContent = t('changePwd');
+    const cpCancel = document.querySelector('#modal-changepw .btn-cancel');
+    if (cpCancel) cpCancel.textContent = t('cancel');
+
+    // 搜索框 placeholder
+    document.getElementById('product-search').placeholder = t('search');
+    document.getElementById('supplier-search').placeholder = t('search');
+    document.getElementById('stockin-search').placeholder = t('searchDO');
+    document.getElementById('order-search').placeholder = t('searchInvoice');
+
+    // 业绩报表
+    const reportTitle = document.querySelector('#page-report .section-title');
+    if (reportTitle) reportTitle.textContent = t('reportTitle');
+    document.getElementById('btn-report-query').textContent = t('query');
+
+    // 如果已登录，重新渲染当前页面
+    if (currentUser) {
+      renderCurrentPage();
+    }
+
+    localStorage.setItem('gmpos_lang', currentLang);
   }
 
   // ============================================================
   // 初始化
   // ============================================================
   function init() {
+    // 语言切换
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        currentLang = this.dataset.lang;
+        applyLang();
+      });
+    });
+
     // 处理登录/登出
     document.getElementById('login-btn').addEventListener('click', doLogin);
     document.getElementById('login-pass').addEventListener('keydown', e => {
@@ -1076,6 +1404,9 @@ function applyPermissions() {
     document.querySelectorAll('.btn-cancel').forEach(btn => {
       btn.addEventListener('click', closeModal);
     });
+
+    // 应用当前语言
+    applyLang();
 
     // Service Worker
     if ('serviceWorker' in navigator) {
