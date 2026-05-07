@@ -543,12 +543,14 @@ function applyPermissions() {
   }
 
   function renderStockIn() {
+    const q = (document.getElementById('stockin-search').value || '').toLowerCase();
     const container = document.getElementById('stockin-list');
-    if (state.stockIns.length === 0) {
+    const list = state.stockIns.filter(s => s.StockInID.toLowerCase().includes(q));
+    if (list.length === 0) {
       container.innerHTML = '<div class="empty">暂无进货记录</div>';
       return;
     }
-    container.innerHTML = [...state.stockIns].reverse().map(s => {
+    container.innerHTML = [...list].reverse().map(s => {
       const d = state.stockInDetails.get(s.StockInID);
       return `<div class="card">
         <div class="row-flex" style="margin-bottom:5px">
@@ -568,13 +570,15 @@ function applyPermissions() {
   }
 
   function renderOrders() {
+    const q = (document.getElementById('order-search').value || '').toLowerCase();
     const container = document.getElementById('orders-list');
-    if (state.orders.length === 0) {
+    const list = state.orders.filter(o => o.POID.toLowerCase().includes(q));
+    if (list.length === 0) {
       container.innerHTML = '<div class="empty">暂无出货记录</div>';
       return;
     }
 
-    container.innerHTML = [...state.orders].reverse().map(o => {
+    container.innerHTML = [...list].reverse().map(o => {
       const d = state.orderDetails.get(o.POID);
       const productName = d ? escapeHTML(getProdName(d.ProductID)) : '-';
       const qty = d ? d.QTY : '-';
@@ -694,6 +698,8 @@ function applyPermissions() {
 
   const debouncedRenderProducts = debounce(renderProducts, 250);
   const debouncedRenderSuppliers = debounce(renderSuppliers, 250);
+  const debouncedRenderStockIn = debounce(renderStockIn, 250);
+  const debouncedRenderOrders = debounce(renderOrders, 250);
   const debouncedRenderCustomers = debounce(renderCustomers, 250);
 
   // ============================================================
@@ -1043,6 +1049,8 @@ function applyPermissions() {
     // 搜索
     document.getElementById('product-search').addEventListener('input', debouncedRenderProducts);
     document.getElementById('supplier-search').addEventListener('input', debouncedRenderSuppliers);
+    document.getElementById('stockin-search').addEventListener('input', debouncedRenderStockIn);
+    document.getElementById('order-search').addEventListener('input', debouncedRenderOrders);
 
     // 产品选择 change 事件 → 更新数量单位标签
     document.getElementById('f-prod').addEventListener('change', updateQtyLabels);
