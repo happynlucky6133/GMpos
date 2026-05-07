@@ -1043,7 +1043,6 @@ function applyPermissions() {
     // 搜索
     document.getElementById('product-search').addEventListener('input', debouncedRenderProducts);
     document.getElementById('supplier-search').addEventListener('input', debouncedRenderSuppliers);
-    document.getElementById('customer-search').addEventListener('input', debouncedRenderCustomers);
 
     // 产品选择 change 事件 → 更新数量单位标签
     document.getElementById('f-prod').addEventListener('change', updateQtyLabels);
@@ -1063,7 +1062,6 @@ function applyPermissions() {
     // 表单提交
     document.getElementById('btn-si').addEventListener('click', submitStockIn);
     document.getElementById('btn-prod').addEventListener('click', submitProduct);
-    document.getElementById('btn-customer').addEventListener('click', submitCustomer);
     document.getElementById('btn-supplier').addEventListener('click', submitSupplier);
     document.getElementById('btn-order').addEventListener('click', submitOrder);
     document.getElementById('btn-adduser').addEventListener('click', submitAddUser);
