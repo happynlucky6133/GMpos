@@ -91,7 +91,11 @@
       query: '查询',
       selectDate: '选择日期查询业绩',
       orderDetail: '出货明细',
+      productSummary: '产品汇总',
+      invoiceDetail: '单据明细',
       totalBoxes: '总箱数',
+      avgOrder: '平均每单',
+      totalRevenue: '总销售额',
       noOrdersDate: '该日期没有出货记录',
       queryFail: '查询失败: ',
       orders_n: '单',
@@ -190,7 +194,11 @@
       query: 'Cari',
       selectDate: 'Pilih tanggal untuk melihat laporan',
       orderDetail: 'Detail Stok Keluar',
+      productSummary: 'Ringkasan Produk',
+      invoiceDetail: 'Detail Invoice',
       totalBoxes: 'Total Box',
+      avgOrder: 'Rata-rata',
+      totalRevenue: 'Total Jualan',
       noOrdersDate: 'Tidak ada catatan pada tanggal ini',
       queryFail: 'Gagal cari: ',
       orders_n: ' pesanan',
@@ -286,7 +294,11 @@
       query: 'Query',
       selectDate: 'Select date to view report',
       orderDetail: 'Order Details',
+      productSummary: 'Product Summary',
+      invoiceDetail: 'Invoice Details',
       totalBoxes: 'Total Boxes',
+      avgOrder: 'Average Order',
+      totalRevenue: 'Total Sales',
       noOrdersDate: 'No orders on this date',
       queryFail: 'Query failed: ',
       orders_n: ' order(s)',
@@ -990,13 +1002,15 @@ function applyPermissions() {
     container.innerHTML = '<div class="loading">' + t('loading') + '</div>';
 
     try {
-      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&select=POID,TotalAmount';
+      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&select=POID,Time,TotalAmount&order=Time';
       const res = await fetch(url, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
       if (!res.ok) throw new Error(await res.text());
       const orders = await res.json();
-      let total = 0, count = 0, totalBoxes = 0, items = [];
+      let total = 0, count = 0, totalBoxes = 0;
+      const productSummary = new Map();
+      const orderRows = [];
       for (const o of orders) {
         total += Number(o.TotalAmount || 0);
         count++;
@@ -1004,13 +1018,23 @@ function applyPermissions() {
         const res2 = await fetch(url2, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
+        const orderItems = [];
         if (res2.ok) {
           const details = await res2.json();
           for (const d of details) {
-            items.push({ POID: o.POID, ProductID: d.ProductID, QTY: d.QTY });
-            totalBoxes += d.QTY;
+            const qty = Number(d.QTY || 0);
+            const name = getProdName(d.ProductID);
+            const unit = getProdUnit(d.ProductID);
+            totalBoxes += qty;
+            orderItems.push({ ProductID: d.ProductID, name, unit, qty });
+
+            const key = d.ProductID;
+            const current = productSummary.get(key) || { ProductID: key, name, unit, qty: 0 };
+            current.qty += qty;
+            productSummary.set(key, current);
           }
         }
+        orderRows.push({ POID: o.POID, Time: o.Time, TotalAmount: Number(o.TotalAmount || 0), items: orderItems });
       }
 
       if (count === 0) {
@@ -1018,22 +1042,45 @@ function applyPermissions() {
         return;
       }
 
-      let detailHtml = items.map(d => {
-        const name = getProdName(d.ProductID);
-        const unit = getProdUnit(d.ProductID);
-        return `<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">${escapeHTML(name)} · ${d.QTY} ${unit}</div>`;
+      const productHtml = Array.from(productSummary.values())
+        .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
+        .map(p => `<div class="report-line">
+          <span>${escapeHTML(p.name)}</span>
+          <strong>${p.qty} ${escapeHTML(p.unit)}</strong>
+        </div>`)
+        .join('');
+
+      const orderHtml = orderRows.map(o => {
+        const itemHtml = o.items.map(item => `<div class="report-order-item">
+          <span>${escapeHTML(item.name)}</span>
+          <strong>${item.qty} ${escapeHTML(item.unit)}</strong>
+        </div>`).join('');
+        return `<div class="card report-order-card">
+          <div class="row-flex">
+            <span class="mono">${escapeHTML(o.POID)}</span>
+            <strong>RM ${o.TotalAmount.toFixed(2)}</strong>
+          </div>
+          <div class="row-sub">${String(o.Time || '').slice(0,5)}</div>
+          <div class="report-order-items">${itemHtml || '-'}</div>
+        </div>`;
       }).join('');
 
-      container.innerHTML = `<div class="card" style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:14px;color:var(--text2)">${dateStr}</span>
-          <span style="font-size:14px;color:var(--text2)">${count} ${t('orders_n')}</span>
+      container.innerHTML = `<div class="report-summary">
+        <div class="report-total-card">
+          <div class="report-label">${t('totalRevenue')}</div>
+          <div class="report-total">RM ${total.toFixed(2)}</div>
+          <div class="report-date">${dateStr}</div>
         </div>
-        <div style="font-size:28px;font-weight:bold;color:var(--blue);margin:8px 0">RM ${total.toFixed(2)}</div>
-        <div style="font-size:16px;color:var(--text2)">${t('totalBoxes')}: ${totalBoxes}</div>
+        <div class="report-metrics">
+          <div><span>${count}</span><small>${t('orders_n')}</small></div>
+          <div><span>${totalBoxes}</span><small>${t('totalBoxes')}</small></div>
+          <div><span>RM ${(total / count).toFixed(2)}</span><small>${t('avgOrder')}</small></div>
+        </div>
       </div>
-      <div class="section-title" style="margin-top:16px">${t('orderDetail')}</div>
-      ${detailHtml}`;
+      <div class="section-title" style="margin-top:16px">${t('productSummary')}</div>
+      <div class="card report-card">${productHtml}</div>
+      <div class="section-title" style="margin-top:16px">${t('invoiceDetail')}</div>
+      ${orderHtml}`;
     } catch (e) {
       container.innerHTML = '<div class="empty">' + t('queryFail') + e.message + '</div>';
     }
