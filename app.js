@@ -1208,7 +1208,7 @@ function applyPermissions() {
   }
 
   function renderStockIn() {
-    const q = (document.getElementById('stockin-search').value || '').toLowerCase();
+    const q = (document.getElementById('stockin-search').value || '').trim().toLowerCase();
     const container = document.getElementById('stockin-list');
 
     // 日期筛选：有搜索词时忽略日期，跨全部搜索
@@ -1216,6 +1216,8 @@ function applyPermissions() {
     const today = todayLocal();
     if (!dateInput.value) dateInput.value = today;
     const filterDate = dateInput.value;
+    dateInput.disabled = !!q;
+    dateInput.title = q ? '搜索时会跨全部日期；清空搜索后日期筛选恢复' : '';
 
     const list = state.stockIns.filter(s => {
       if (q) {
@@ -1231,11 +1233,12 @@ function applyPermissions() {
       const sDate = String(s.Date).slice(0,10);
       return sDate === filterDate;
     });
+    const searchNotice = q ? `<div class="empty" style="padding:8px 10px;margin-bottom:8px;text-align:left">正在跨全部日期搜索：${escapeHTML(q)}</div>` : '';
     if (list.length === 0) {
-      container.innerHTML = '<div class="empty">' + t('noStockin') + '</div>';
+      container.innerHTML = searchNotice + '<div class="empty">' + t('noStockin') + '</div>';
       return;
     }
-    container.innerHTML = [...list].reverse().map(s => {
+    container.innerHTML = searchNotice + [...list].reverse().map(s => {
       const date = String(s.Date).slice(0,10);
       const status = s.Status || 'pending';
       let statusBadge = '';
@@ -1267,7 +1270,7 @@ function applyPermissions() {
   }
 
   function renderOrders() {
-    const q = (document.getElementById('order-search').value || '').toLowerCase();
+    const q = (document.getElementById('order-search').value || '').trim().toLowerCase();
     const container = document.getElementById('orders-list');
 
     // 日期筛选：有搜索词时忽略日期，跨全部搜索
@@ -1275,6 +1278,8 @@ function applyPermissions() {
     const today = todayLocal();
     if (!dateInput.value) dateInput.value = today;
     const filterDate = dateInput.value;
+    dateInput.disabled = !!q;
+    dateInput.title = q ? '搜索时会跨全部日期；清空搜索后日期筛选恢复' : '';
 
     const list = state.orders.filter(o => {
       if (q) {
@@ -1289,12 +1294,13 @@ function applyPermissions() {
       const oDate = String(o.Date).slice(0,10);
       return oDate === filterDate;
     });
+    const searchNotice = q ? `<div class="empty" style="padding:8px 10px;margin-bottom:8px;text-align:left">正在跨全部日期搜索：${escapeHTML(q)}</div>` : '';
     if (list.length === 0) {
-      container.innerHTML = '<div class="empty">' + t('noOrders') + '</div>';
+      container.innerHTML = searchNotice + '<div class="empty">' + t('noOrders') + '</div>';
       return;
     }
 
-    container.innerHTML = [...list].reverse().map(o => {
+    container.innerHTML = searchNotice + [...list].reverse().map(o => {
       const date = String(o.Date).slice(0,10);
       const status = o.Status || 'pending';
       let statusBadge = '';

@@ -17,7 +17,14 @@ declare
   v_si_count int;
   v_po_count int;
 begin
-  -- 1. 检查两个 SKU 存在
+  -- 1. 用固定顺序锁住两个产品，避免并发合并造成竞争或死锁
+  perform 1
+  from public.products
+  where "ProductID" in (p_from_id, p_to_id)
+  order by "ProductID"
+  for update;
+
+  -- 2. 检查两个 SKU 存在
   select exists(select 1 from public.products where "ProductID" = p_from_id) into v_from_exists;
   select exists(select 1 from public.products where "ProductID" = p_to_id) into v_to_exists;
 
@@ -29,32 +36,32 @@ begin
     return json_build_object('ok', false, 'status', 'not_found', 'message', 'Target SKU not found: ' || p_to_id);
   end if;
 
-  -- 2. 检查不是同一个 SKU
+  -- 3. 检查不是同一个 SKU
   if p_from_id = p_to_id then
     return json_build_object('ok', false, 'status', 'same_sku', 'message', 'Cannot merge SKU into itself');
   end if;
 
-  -- 3. 读取库存
+  -- 4. 读取库存
   select "StockBalance" into v_from_stock from public.products where "ProductID" = p_from_id;
   select "StockBalance" into v_to_stock from public.products where "ProductID" = p_to_id;
 
-  -- 4. 迁移 stock_in_details
+  -- 5. 迁移 stock_in_details
   select count(*) into v_si_count from public.stock_in_details where "ProductID" = p_from_id;
   update public.stock_in_details set "ProductID" = p_to_id where "ProductID" = p_from_id;
 
-  -- 5. 迁移 po_details
+  -- 6. 迁移 po_details
   select count(*) into v_po_count from public.po_details where "ProductID" = p_from_id;
   update public.po_details set "ProductID" = p_to_id where "ProductID" = p_from_id;
 
-  -- 6. 合并库存
+  -- 7. 合并库存
   update public.products
   set "StockBalance" = coalesce(v_to_stock, 0) + coalesce(v_from_stock, 0)
   where "ProductID" = p_to_id;
 
-  -- 7. 删除旧 SKU
+  -- 8. 删除旧 SKU
   delete from public.products where "ProductID" = p_from_id;
 
-  -- 8. 写 audit log
+  -- 9. 写 audit log
   if p_user != '' then
     insert into public.audit_logs ("Timestamp", "User", "Action", "Target", "Detail")
     values (to_char(now(), 'YYYY-MM-DD HH24:MI:SS'), p_user, 'merge_sku', p_from_id || '→' || p_to_id,
