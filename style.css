@@ -403,6 +403,27 @@ select:focus, input:focus { border-color: var(--green); }
 .btn-cancel { background: #dc3545; color: #fff; }
 .btn-sm:active { opacity: 0.8; }
 
+.order-detail-list {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 6px;
+}
+.order-detail-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--text);
+}
+.order-detail-line span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.order-detail-line strong {
+  white-space: nowrap;
+}
+
 /* ===== 登录页面 ===== */
 #page-login {
   display: none;

@@ -602,7 +602,11 @@ function applyPermissions() {
     state.stockIns = data.stockIns || [];
     state.stockInDetails = new Map((data.stockInDetails || []).map(d => [d.StockInID, d]));
     state.orders = data.orders || [];
-    state.orderDetails = new Map((data.orderDetails || []).map(d => [d.POID, d]));
+    state.orderDetails = new Map();
+    (data.orderDetails || []).forEach(d => {
+      if (!state.orderDetails.has(d.POID)) state.orderDetails.set(d.POID, []);
+      state.orderDetails.get(d.POID).push(d);
+    });
 
     prodNameCache = new Map();
     state.products.forEach((p, id) => prodNameCache.set(id, p.ProductName));
@@ -642,6 +646,45 @@ function applyPermissions() {
   function getProdUnit(id) {
     const p = state.products.get(id);
     return p ? (p.Unit || 'kg') : 'kg';
+  }
+
+  function getOrderDetails(poID) {
+    const details = state.orderDetails.get(poID);
+    if (!details) return [];
+    return Array.isArray(details) ? details : [details];
+  }
+
+  function getFirstOrderDetail(poID) {
+    return getOrderDetails(poID)[0] || null;
+  }
+
+  function renderOrderDetailsHtml(poID) {
+    const details = getOrderDetails(poID);
+    if (details.length === 0) return '<div style="font-size:13px">-</div>';
+    return details.map(d => {
+      const productName = escapeHTML(getProdName(d.ProductID));
+      const unit = getProdUnit(d.ProductID);
+      return `<div class="order-detail-line">
+        <span>${productName}</span>
+        <strong>${Number(d.QTY || 0)} ${unit}</strong>
+      </div>`;
+    }).join('');
+  }
+
+  function orderMatchesSearch(order, query) {
+    if (!query) return true;
+    const haystack = [
+      order.POID,
+      order.Date,
+      order.Status,
+      order.TotalAmount,
+      ...getOrderDetails(order.POID).flatMap(d => [
+        d.ProductID,
+        getProdName(d.ProductID),
+        d.QTY
+      ])
+    ].join(' ').toLowerCase();
+    return haystack.includes(query);
   }
 
   function stockBadge(n) {
@@ -885,18 +928,14 @@ function applyPermissions() {
   function renderOrders() {
     const q = (document.getElementById('order-search').value || '').toLowerCase();
     const container = document.getElementById('orders-list');
-    const list = state.orders.filter(o => o.POID.toLowerCase().includes(q));
+    const list = state.orders.filter(o => orderMatchesSearch(o, q));
     if (list.length === 0) {
       container.innerHTML = '<div class="empty">' + t('noOrders') + '</div>';
       return;
     }
 
     container.innerHTML = [...list].reverse().map(o => {
-      const d = state.orderDetails.get(o.POID);
-      const productName = d ? escapeHTML(getProdName(d.ProductID)) : '-';
-      const qty = d ? d.QTY : '-';
       const date = String(o.Date).slice(0,10);
-      const unit = d ? getProdUnit(d.ProductID) : 'kg';
       const status = o.Status || 'pending';
       let statusBadge = '';
       let actions = '';
@@ -919,7 +958,7 @@ function applyPermissions() {
           ${statusBadge}
           ${isAdmin() ? `<button class="del-btn sm" data-type="order" data-id="${o.POID}">✕</button>` : ''}
         </div>
-        <div style="font-size:13px">${productName} · <strong>${qty} ${unit}</strong></div>
+        <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
         <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
         ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
@@ -1303,7 +1342,7 @@ function applyPermissions() {
   window.editOrder = function(poID) {
     const order = state.orders.find(o => o.POID === poID);
     if (!order) { showToast('订单不存在', 'err'); return; }
-    const detail = state.orderDetails.get(poID);
+    const detail = getFirstOrderDetail(poID);
     if (!detail) { showToast('订单无明细', 'err'); return; }
 
     // 预填 modal
