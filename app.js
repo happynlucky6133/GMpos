@@ -968,7 +968,7 @@ function applyPermissions() {
         <div class="row-flex" style="margin-bottom:5px">
           <span class="mono">${o.POID}</span>
           ${statusBadge}
-          ${isAdmin() ? `<button class="del-btn sm" data-type="order" data-id="${o.POID}">✕</button>` : ''}
+          ${isAdmin() && status === 'pending' ? `<button class="del-btn sm" onclick="window.deleteOrder('${o.POID}')">✕</button>` : ''}
         </div>
         <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
         <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
@@ -1162,11 +1162,16 @@ function applyPermissions() {
   }
 
   function closeModal() {
-    if (state.currentModal === 'modal-order') {
+    const wasEdit = state.currentModal === 'modal-order';
+    if (wasEdit) {
       // 恢复标题与按钮文字
       const title = document.querySelector('#modal-order .modal-title');
       if (title) title.textContent = t('newOrder');
       document.getElementById('btn-order').textContent = t('confirmOrder');
+      // 清空编辑行和 hidden，恢复新建行
+      document.getElementById('o-editing-poid').value = '';
+      document.getElementById('o-edit-rows').innerHTML = '';
+      document.getElementById('o-new-row-area').style.display = '';
     }
     if (state.currentModal) {
       document.getElementById(state.currentModal).classList.remove('open');
@@ -1306,44 +1311,70 @@ function applyPermissions() {
 
   async function submitOrder() {
     if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
-    const qty = parseInt(document.getElementById('o-qty').value);
-    if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
-    const btn = document.getElementById('btn-order');
-    btn.disabled = true;
-    btn.textContent = t('ordering');
-    try {
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0,10);
-      const timeStr = now.toTimeString().slice(0,8);
-      const uid = Math.random().toString(36).slice(2, 6);
-      const poID = `PO-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
-      const detailID = Math.random().toString(36).slice(2, 10);
-      const productID = document.getElementById('o-prod').value;
-      const unit = getProdUnit(productID);
-      const editingPOID = document.getElementById('o-editing-poid').value;
+    const editingPOID = document.getElementById('o-editing-poid').value;
 
-      if (editingPOID) {
-        // 编辑已有 pending 订单
+    if (editingPOID) {
+      // === 编辑模式：更新整单 ===
+      const btn = document.getElementById('btn-order');
+      btn.disabled = true;
+      btn.textContent = t('submitting');
+      try {
+        // 更新总金额
         await sbPatch('purchase_orders', 'POID', editingPOID, { TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
-        await sbPatch('po_details', 'DetailID', document.getElementById('o-editing-detailid').value, { ProductID: productID, QTY: qty });
+
+        // 处理每一行编辑区域
+        const rows = document.querySelectorAll('#o-edit-rows .o-edit-row');
+        for (const row of rows) {
+          const detailId = row.dataset.detailid;
+          const prodEl = row.querySelector('.o-edit-prod');
+          const qtyEl = row.querySelector('.o-edit-qty');
+          const productID = prodEl.value;
+          const qty = parseInt(qtyEl.value);
+          if (!qty || qty < 1) continue;
+          await sbPatch('po_details', 'DetailID', detailId, { ProductID: productID, QTY: qty });
+        }
+
         showToast(t('orderUpdated'), 'ok');
-      } else {
+      } catch (e) {
+        showToast(t('submitFail') + e.message, 'err');
+        btn.disabled = false;
+        btn.textContent = t('confirmOrder');
+        return;
+      }
+    } else {
+      // === 新建模式 ===
+      const qty = parseInt(document.getElementById('o-qty').value);
+      if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
+      const btn = document.getElementById('btn-order');
+      btn.disabled = true;
+      btn.textContent = t('ordering');
+      try {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0,10);
+        const timeStr = now.toTimeString().slice(0,8);
+        const uid = Math.random().toString(36).slice(2, 6);
+        const poID = `PO-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
+        const detailID = Math.random().toString(36).slice(2, 10);
+        const productID = document.getElementById('o-prod').value;
+
         await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
         await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
         showToast(t('orderSuccess'), 'ok');
+      } catch (e) {
+        showToast(t('submitFail') + e.message, 'err');
+        btn.disabled = false;
+        btn.textContent = t('confirmOrder');
+        return;
       }
-
-      document.getElementById('o-qty').value = '';
-      document.getElementById('o-amount').value = '';
-      document.getElementById('o-editing-poid').value = '';
-      document.getElementById('o-editing-detailid').value = '';
-      closeModal();
-      await loadAll();
-    } catch (e) {
-      showToast(t('submitFail') + e.message, 'err');
     }
-    btn.disabled = false;
-    btn.textContent = t('confirmOrder');
+
+    // 重置
+    document.getElementById('o-qty').value = '';
+    document.getElementById('o-amount').value = '';
+    document.getElementById('o-editing-poid').value = '';
+    document.getElementById('o-edit-rows').innerHTML = '';
+    closeModal();
+    await loadAll();
   }
 
   // ============================================================
@@ -1356,11 +1387,12 @@ function applyPermissions() {
       const details = await sbGetFiltered('po_details', 'POID', poID);
       if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
 
-      // 逐条扣库存
+      // 逐条扣库存 — 从数据库拉最新库存
       for (const d of details) {
-        const prod = getProd(d.ProductID);
-        if (prod) {
-          const newBalance = (Number(prod.StockBalance) || 0) - d.QTY;
+        const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
+        if (prod && prod.length > 0) {
+          const currentStock = Number(prod[0].StockBalance) || 0;
+          const newBalance = currentStock - d.QTY;
           await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
         }
       }
@@ -1372,7 +1404,7 @@ function applyPermissions() {
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
     }
-  };
+  }; 
 
   window.cancelOrder = async function(poID) {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
@@ -1389,26 +1421,59 @@ function applyPermissions() {
   window.editOrder = function(poID) {
     const order = state.orders.find(o => o.POID === poID);
     if (!order) { showToast('订单不存在', 'err'); return; }
-    const detail = getFirstOrderDetail(poID);
-    if (!detail) { showToast('订单无明细', 'err'); return; }
+    const details = getOrderDetails(poID);
+    if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
 
-    // 预填 modal
-    document.getElementById('o-prod').value = detail.ProductID;
-    document.getElementById('o-qty').value = detail.QTY;
-    document.getElementById('o-amount').value = order.TotalAmount || '';
+    // 隐藏新建行
+    document.getElementById('o-new-row-area').style.display = 'none';
+
+    // 预填 hidden
     document.getElementById('o-editing-poid').value = poID;
-    document.getElementById('o-editing-detailid').value = detail.DetailID;
+
+    // 清空并填充编辑行
+    const container = document.getElementById('o-edit-rows');
+    container.innerHTML = details.map(d => {
+      const opts = Array.from(state.products.values()).map(p =>
+        `<option value="${p.ProductID}" ${p.ProductID === d.ProductID ? 'selected' : ''}>${escapeHTML(p.ProductName)} (${p.Grade || ''})</option>`
+      ).join('');
+      return `<div class="form-group o-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:8px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">
+        <div style="flex:1">
+          <label class="form-label" style="font-size:11px">产品</label>
+          <select class="o-edit-prod">${opts}</select>
+        </div>
+        <div style="width:100px">
+          <label class="form-label" style="font-size:11px">数量</label>
+          <input type="number" class="o-edit-qty" value="${d.QTY}" min="1" inputmode="numeric" style="width:100%">
+        </div>
+        <button class="del-btn" onclick="this.closest('.o-edit-row').remove()" style="margin-bottom:4px">✕</button>
+      </div>`;
+    }).join('');
+
+    // 预填总金额
+    document.getElementById('o-amount').value = order.TotalAmount || '';
 
     // 更新标题与按钮文字
     const title = document.querySelector('#modal-order .modal-title');
     if (title) title.textContent = t('editOrder');
     document.getElementById('btn-order').textContent = t('orderUpdated') + ' ✓';
 
-    // 更新标签
-    updateQtyLabels();
     // 打开 modal
     document.getElementById('modal-order').classList.add('open');
     state.currentModal = 'modal-order';
+  }; 
+
+  // 删除订单（admin，硬删除 purchase_orders + po_details）
+  window.deleteOrder = async function(poID) {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    if (!confirm('确定删除此订单？不可恢复。')) return;
+    try {
+      await sbDelete('po_details', 'POID', poID);
+      await sbDelete('purchase_orders', 'POID', poID);
+      showToast(t('deleteSuccess'), 'ok');
+      await loadAll();
+    } catch (e) {
+      showToast(t('deleteFail') + e.message, 'err');
+    }
   };
 
   // ============================================================
@@ -1433,9 +1498,6 @@ function applyPermissions() {
           } else if (type === 'stockin') {
             await sbDelete('stock_ins', 'StockInID', id);
             await sbDelete('stock_in_details', 'StockInID', id).catch(() => {});
-          } else if (type === 'order') {
-            await sbDelete('purchase_orders', 'POID', id);
-            await sbDelete('po_details', 'POID', id).catch(() => {});
           }
           showToast(t('deleteSuccess'), 'ok');
           await loadAll();
