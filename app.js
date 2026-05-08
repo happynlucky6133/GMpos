@@ -542,6 +542,21 @@ function applyPermissions() {
     return true;
   }
 
+  async function sbRpc(rpcName, params) {
+    const url = SB + '/rpc/' + rpcName;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify(params)
+    });
+    if (!res.ok) throw new Error('RPC ' + rpcName + ' failed: ' + await res.text());
+    return res.json();
+  }
+
   // ============================================================
   // 登录 / 登出
   // ============================================================
@@ -1668,47 +1683,20 @@ function applyPermissions() {
   window.confirmStockIn = async function(stockInID) {
     if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
     try {
-      // 防重复确认：条件更新 Status=pending → done，用 return=representation 判断是否锁到
-      const lockUrl = SB + '/stock_ins?StockInID=eq.' + encodeURIComponent(stockInID) + '&Status=eq.pending&select=StockInID';
-      const lockRes = await fetch(lockUrl, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ Status: 'done' })
-      });
-      if (!lockRes.ok) throw new Error(await lockRes.text());
-      const locked = await lockRes.json();
-      // 如果返回空数组，说明没有 pending 记录被更新 → 已被处理
-      if (!locked || locked.length === 0) {
+      const result = await sbRpc('confirm_stock_in', { p_stock_in_id: stockInID });
+      if (result.ok) {
+        showToast(t('confirmStockin') + ' ✅', 'ok');
+      } else if (result.status === 'already_processed') {
         showToast('此进货单已被处理', 'err');
-        return;
+      } else if (result.status === 'no_details') {
+        showToast('进货单无明细', 'err');
+      } else if (result.status === 'not_found') {
+        showToast('进货单不存在', 'err');
+      } else if (result.status === 'invalid_product') {
+        showToast('产品不存在: ' + (result.message || ''), 'err');
+      } else {
+        showToast(t('submitFail') + (result.message || result.status), 'err');
       }
-
-      const details = await sbGetFiltered('stock_in_details', 'StockInID', stockInID);
-      if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
-
-      // 先逐条加库存，再加完才确定 done（已锁定状态不会重复执行）
-      try {
-        for (const d of details) {
-          const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
-          if (prod && prod.length > 0) {
-            const currentStock = Number(prod[0].StockBalance) || 0;
-            const newBalance = currentStock + Number(d.Qty || 0);
-            await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
-          }
-        }
-      } catch (stockErr) {
-        // 库存更新失败 → 回滚状态到 pending 方便重试
-        showToast('库存更新失败，已回滚单据状态: ' + stockErr.message, 'err');
-        await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'pending' }).catch(() => {});
-        return;
-      }
-
-      showToast(t('confirmStockin') + ' ✅', 'ok');
       await loadAll();
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
@@ -1743,10 +1731,31 @@ function applyPermissions() {
       ).join('');
       const uprice = Number(d.UnitPrice || 0);
       const lineAmt = uprice ? Number(d.Qty) * uprice : 0;
-      return `<div class="form-group si-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:6px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">\n        <div style="flex:1;min-width:100px">\n          <label class="form-label" style="font-size:11px">产品</label>\n          <select class="si-edit-prod">${opts}</select>\n        </div>\n        <div style="width:70px">\n          <label class="form-label" style="font-size:11px">数量</label>\n          <input type="number" class="si-edit-qty" value="${d.Qty}" min="1" inputmode="numeric" style="width:100%">\n        </div>\n        <div style="width:90px">\n          <label class="form-label" style="font-size:11px">单价 (RM)</label>\n          <input type="number" class="si-edit-price" value="${uprice.toFixed(2)}" min="0" step="0.01" inputmode="decimal" style="width:100%">\n        </div>\n        <div style="width:70px">\n          <label class="form-label" style="font-size:11px">小计</label>\n          <div class="order-line-total" style="min-height:43px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:14px;font-weight:700">RM ${lineAmt.toFixed(2)}</div>\n        </div>\n        <button class="del-btn" onclick="this.closest('.si-edit-row').remove();siRecalcTotal()" style="margin-bottom:4px">✕</button>\n      </div>`;
+      return `<div class="form-group si-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:6px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">
+        <div style="flex:1;min-width:100px">
+          <label class="form-label" style="font-size:11px">产品</label>
+          <select class="si-edit-prod">${opts}</select>
+        </div>
+        <div style="width:70px">
+          <label class="form-label" style="font-size:11px">数量</label>
+          <input type="number" class="si-edit-qty" value="${d.Qty}" min="1" inputmode="numeric" style="width:100%">
+        </div>
+        <div style="width:90px">
+          <label class="form-label" style="font-size:11px">单价 (RM)</label>
+          <input type="number" class="si-edit-price" value="${uprice.toFixed(2)}" min="0" step="0.01" inputmode="decimal" style="width:100%">
+        </div>
+        <div style="width:70px">
+          <label class="form-label" style="font-size:11px">小计</label>
+          <div class="order-line-total" style="min-height:43px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:14px;font-weight:700">RM ${lineAmt.toFixed(2)}</div>
+        </div>
+        <button class="del-btn si-edit-del" style="margin-bottom:4px">✕</button>
+      </div>`;
     }).join('');
 
-    // 给编辑行的单价添加自动重算事件
+    // 先设置旧总金额
+    document.getElementById('f-amount').value = si.TotalAmount || '';
+
+    // 事件绑定：数量/单价变化重算行小计 + 总金额
     container.querySelectorAll('.si-edit-qty, .si-edit-price').forEach(el => {
       el.addEventListener('input', function() {
         const row = this.closest('.si-edit-row');
@@ -1757,21 +1766,23 @@ function applyPermissions() {
         siRecalcTotal();
       });
     });
-    // 计算所有行小计加总作为总金额
-    siRecalcTotal();
 
-    function siRecalcTotal() {
-      let total = 0;
-      document.querySelectorAll('#si-edit-rows .si-edit-row').forEach(row => {
-        const qty = parseFloat(row.querySelector('.si-edit-qty').value) || 0;
-        const price = parseFloat(row.querySelector('.si-edit-price').value) || 0;
-        total += qty * price;
+    // 事件绑定：删除行按钮
+    container.querySelectorAll('.si-edit-del').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const row = this.closest('.si-edit-row');
+        // 至少保留一行
+        if (document.querySelectorAll('#si-edit-rows .si-edit-row').length <= 1) {
+          showToast('至少保留一行', 'err');
+          return;
+        }
+        row.remove();
+        siRecalcTotal();
       });
-      document.getElementById('f-amount').value = total.toFixed(2);
-    }
+    });
 
-    document.getElementById('f-amount').value = si.TotalAmount || '';
-    document.getElementById('f-amount').readOnly = false;
+    // 用明细重算覆盖旧总金额
+    siRecalcTotal();
     const title = document.querySelector('#modal-si .modal-title');
     if (title) title.textContent = '编辑进货单';
     document.getElementById('btn-si').textContent = '保存更改';
@@ -1964,47 +1975,20 @@ function applyPermissions() {
   window.confirmOrder = async function(poID) {
     if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
     try {
-      // 防重复确认：条件更新 Status=pending → done，用 return=representation 判断是否锁到
-      const lockUrl = SB + '/purchase_orders?POID=eq.' + encodeURIComponent(poID) + '&Status=eq.pending&select=POID';
-      const lockRes = await fetch(lockUrl, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ Status: 'done' })
-      });
-      if (!lockRes.ok) throw new Error(await lockRes.text());
-      const locked = await lockRes.json();
-      if (!locked || locked.length === 0) {
+      const result = await sbRpc('confirm_order', { p_po_id: poID });
+      if (result.ok) {
+        showToast(t('orderConfirm') + ' ✅', 'ok');
+      } else if (result.status === 'already_processed') {
         showToast('此订单已被处理', 'err');
-        return;
+      } else if (result.status === 'no_details') {
+        showToast('订单无明细', 'err');
+      } else if (result.status === 'not_found') {
+        showToast('订单不存在', 'err');
+      } else if (result.status === 'invalid_product') {
+        showToast('产品不存在: ' + (result.message || ''), 'err');
+      } else {
+        showToast(t('submitFail') + (result.message || result.status), 'err');
       }
-
-      // 获取订单详情
-      const details = await sbGetFiltered('po_details', 'POID', poID);
-      if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
-
-      // 先扣库存，全部成功后再确认 done（已锁定不会重复执行）
-      try {
-        for (const d of details) {
-          const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
-          if (prod && prod.length > 0) {
-            const currentStock = Number(prod[0].StockBalance) || 0;
-            const newBalance = currentStock - d.QTY;
-            await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
-          }
-        }
-      } catch (stockErr) {
-        // 库存更新失败 → 回滚状态到 pending 方便重试
-        showToast('库存更新失败，已回滚单据状态: ' + stockErr.message, 'err');
-        await sbPatch('purchase_orders', 'POID', poID, { Status: 'pending' }).catch(() => {});
-        return;
-      }
-
-      showToast(t('orderConfirm') + ' ✅', 'ok');
       await loadAll();
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
@@ -2173,35 +2157,19 @@ function applyPermissions() {
     btn.disabled = true;
     btn.textContent = t('submitting');
     try {
-      // 1. 更新目标 SKU 库存
-      const newBalance = Number(from.StockBalance || 0) + Number(to.StockBalance || 0);
-      await sbPatch('products', 'ProductID', toID, { StockBalance: newBalance });
-
-      // 2. 批量迁移所有引用旧 ProductID 的记录（直接用 fetch PATCH by column filter）
-      const SUPABASE_KEY_LOCAL = SUPABASE_KEY;
-      const headers = {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY_LOCAL,
-        'Authorization': 'Bearer ' + SUPABASE_KEY_LOCAL,
-        'Prefer': 'count=exact'
-      };
-
-      // stock_in_details: ProductID=eq.fromID → ProductID=toID
-      let url = SB + '/stock_in_details?ProductID=eq.' + encodeURIComponent(fromID);
-      let res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ ProductID: toID }) });
-      if (!res.ok) throw new Error('迁移 stock_in_details 失败: ' + await res.text());
-
-      // po_details: ProductID=eq.fromID → ProductID=toID
-      url = SB + '/po_details?ProductID=eq.' + encodeURIComponent(fromID);
-      res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ ProductID: toID }) });
-      if (!res.ok) throw new Error('迁移 po_details 失败: ' + await res.text());
-
-      // 3. 删除旧 SKU
-      await sbDelete('products', 'ProductID', fromID);
-
-      showToast(`已合并: ${from.ProductName} → ${to.ProductName}`, 'ok');
-      await auditLog('合并SKU', `${fromID}→${toID}`, `${from.ProductName} → ${to.ProductName}`);
-      closeModal();
+      // 通过 RPC 事务完成合并
+      const displayName = currentUser ? currentUser.DisplayName : '';
+      const result = await sbRpc('merge_sku', { p_from_id: fromID, p_to_id: toID, p_user: displayName });
+      if (result.ok) {
+        showToast(`已合并: ${from.ProductName} → ${to.ProductName}`, 'ok');
+        closeModal();
+      } else if (result.status === 'not_found') {
+        showToast('SKU 不存在: ' + (result.message || ''), 'err');
+      } else if (result.status === 'same_sku') {
+        showToast('不能自己合并自己', 'err');
+      } else {
+        showToast(t('submitFail') + (result.message || result.status), 'err');
+      }
       await loadAll();
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
