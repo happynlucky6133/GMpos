@@ -158,7 +158,8 @@
         card.appendChild(note);
       }
       const note = card.querySelector('.v2-backorder-note');
-      if (note) note.textContent = tx('debtHint');
+      const nextHint = tx('debtHint');
+      if (note && note.textContent !== nextHint) note.textContent = nextHint;
     });
   }
 
