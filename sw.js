@@ -1,5 +1,5 @@
-/* ===== GMPos Service Worker v2 ===== */
-const CACHE = 'gmpos-v2-static';
+/* ===== GMPos Service Worker v3 ===== */
+const CACHE = 'gmpos-v3-static';
 const STATIC_ASSETS = [
   '.',
   './index.html',
@@ -43,7 +43,7 @@ self.addEventListener('activate', e => {
 });
 
 // ============================================================
-// 请求：缓存优先策略（对 API 请求使用网络优先）
+// 请求：网络优先，避免 GitHub Pages 部署后继续跑旧 app.js/index.html
 // ============================================================
 self.addEventListener('fetch', e => {
   const url = e.request.url;
@@ -54,12 +54,10 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // 静态资源：缓存优先，网络回退
-  e.respondWith(
-    caches.match(e.request)
-      .then(cached => cached || fetchAndCache(e.request))
-      .catch(() => caches.match('./index.html'))
-  );
+  // 静态资源：优先取网络最新版，网络失败才回退缓存
+  e.respondWith(fetchAndCache(e.request).catch(() =>
+    caches.match(e.request).then(cached => cached || caches.match('./index.html'))
+  ));
 });
 
 // ============================================================
