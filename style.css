@@ -244,6 +244,8 @@ html, body {
   padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
   width: 100%;
   max-width: 500px;
+  max-height: 92vh;
+  overflow-y: auto;
 }
 .modal-handle {
   width: 36px;
@@ -296,6 +298,19 @@ select:focus, input:focus { border-color: var(--green); }
 }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary:active { opacity: 0.85; }
+
+.btn-secondary {
+  background: var(--blue-light);
+  color: var(--blue);
+  border: 1px solid var(--border);
+  padding: 11px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  margin: 6px 0 10px;
+}
 
 .btn-cancel {
   background: none;
@@ -422,6 +437,59 @@ select:focus, input:focus { border-color: var(--green); }
 }
 .order-detail-line strong {
   white-space: nowrap;
+}
+.order-detail-line em {
+  display: block;
+  color: var(--text2);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+  text-align: right;
+}
+
+.order-edit-row {
+  position: relative;
+  border-top: 1px solid var(--border);
+  padding: 12px 40px 10px 0;
+}
+.order-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 10px;
+}
+.order-edit-grid .form-group {
+  margin-bottom: 8px;
+}
+.order-edit-grid .form-group:nth-child(3),
+.order-edit-grid .form-group:nth-child(4) {
+  grid-column: span 1;
+}
+.order-line-total {
+  min-height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+.order-row-remove {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--red-light);
+  color: var(--red);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .report-summary {

@@ -181,16 +181,12 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">出货</div>
-    <div id="o-new-row-area" class="form-group">
-      <div style="display:flex;gap:8px;align-items:end">
-        <div style="flex:1"><label class="form-label" id="lbl-order-product">产品</label><select id="o-prod"></select></div>
-        <div style="width:100px"><label class="form-label" id="o-qty-label">数量</label><input type="number" id="o-qty" placeholder="0" min="1" inputmode="numeric"></div>
-      </div>
-    </div>
-    <div class="form-group"><label class="form-label" id="lbl-order-amount">总金额 (RM)</label><input type="number" id="o-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
-    <!-- 编辑模式：多行填充到这里 -->
-    <div id="o-edit-rows"></div>
+    <div class="form-group"><label class="form-label" id="lbl-order-invoice">Invoice No</label><input type="text" id="o-poid" placeholder="自动生成"></div>
+    <div class="form-group"><label class="form-label" id="lbl-order-amount">总金额 (RM)</label><input type="number" id="o-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" readonly></div>
+    <div id="order-item-editor"></div>
+    <button class="btn-secondary" type="button" id="btn-order-add-item">+ 添加产品</button>
     <input type="hidden" id="o-editing-poid" value="">
+    <input type="hidden" id="o-editing-detailid" value="">
     <button class="btn-primary" id="btn-order">出货</button>
     <button class="btn-cancel" id="btn-order-cancel">取消</button>
   </div>

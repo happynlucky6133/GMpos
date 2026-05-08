@@ -70,6 +70,10 @@
       orderEdit: '编辑',
       editOrder: '编辑出货',
       orderUpdated: '订单已更新！',
+      addOrderItem: '添加产品',
+      unitPrice: '单价',
+      lineTotal: '小计',
+      itemTotal: '明细合计',
       searchInvoice: '搜索 Invoice No...',
       totalAmount: '总金额 (RM)',
       noOrders: '暂无出货记录',
@@ -176,6 +180,18 @@
       confirmOrder: 'Stok Keluar',
       ordering: 'Memproses...',
       orderSuccess: 'Stok keluar berhasil!',
+      orderPending: 'Menunggu',
+      orderDone: 'Selesai',
+      orderCancelled: 'Dibatalkan',
+      orderConfirm: 'Selesaikan',
+      orderCancel: 'Batal',
+      orderEdit: 'Edit',
+      editOrder: 'Edit Stok Keluar',
+      orderUpdated: 'Pesanan diperbarui!',
+      addOrderItem: 'Tambah Produk',
+      unitPrice: 'Harga',
+      lineTotal: 'Subtotal',
+      itemTotal: 'Total Item',
       searchInvoice: 'Cari Invoice...',
       totalAmount: 'Total (RM)',
       noOrders: 'Belum ada catatan keluar',
@@ -276,6 +292,18 @@
       confirmOrder: 'Confirm Order',
       ordering: 'Processing order...',
       orderSuccess: 'Order created!',
+      orderPending: 'Pending',
+      orderDone: 'Done',
+      orderCancelled: 'Cancelled',
+      orderConfirm: 'Mark Done',
+      orderCancel: 'Cancel',
+      orderEdit: 'Edit',
+      editOrder: 'Edit Order',
+      orderUpdated: 'Order updated!',
+      addOrderItem: 'Add Product',
+      unitPrice: 'Unit Price',
+      lineTotal: 'Line Total',
+      itemTotal: 'Item Total',
       searchInvoice: 'Search Invoice No...',
       totalAmount: 'Total Amount (RM)',
       noOrders: 'No orders yet',
@@ -354,6 +382,8 @@
 
   let prodNameCache = new Map();
   let supNameCache = new Map();
+  let orderDraftRows = [];
+  let poDetailsAmountColumnsReady = true;
 
   // ============================================================
   // 当前用户
@@ -634,7 +664,7 @@ function applyPermissions() {
     if (sup) sup.innerHTML = Array.from(state.suppliers.values())
       .map(s => `<option value="${s.SupplierID}">${escapeHTML(s.SupplierName)}</option>`).join('');
 
-    ['f-prod', 'o-prod'].forEach(id => {
+    ['f-prod'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = Array.from(state.products.values())
         .map(p => `<option value="${p.ProductID}">${escapeHTML(p.ProductName)} (${p.Grade || ''})</option>`).join('');
@@ -676,9 +706,11 @@ function applyPermissions() {
     return details.map(d => {
       const productName = escapeHTML(getProdName(d.ProductID));
       const unit = getProdUnit(d.ProductID);
+      const amount = Number(d.LineAmount || d.Amount || 0);
+      const money = amount ? `<em>RM ${amount.toFixed(2)}</em>` : '';
       return `<div class="order-detail-line">
         <span>${productName}</span>
-        <strong>${Number(d.QTY || 0)} ${unit}</strong>
+        <strong>${Number(d.QTY || 0)} ${unit}${money}</strong>
       </div>`;
     }).join('');
   }
@@ -697,6 +729,140 @@ function applyPermissions() {
       ])
     ].join(' ').toLowerCase();
     return haystack.includes(query);
+  }
+
+  function productOptions(selectedID) {
+    return Array.from(state.products.values())
+      .map(p => `<option value="${p.ProductID}" ${p.ProductID === selectedID ? 'selected' : ''}>${escapeHTML(p.ProductName)} (${escapeHTML(p.Grade || '')})</option>`)
+      .join('');
+  }
+
+  function makeOrderDraftRow(detail) {
+    const productID = detail && detail.ProductID ? detail.ProductID : (Array.from(state.products.keys())[0] || '');
+    const qty = Number((detail && detail.QTY) || 1);
+    const savedPrice = Number((detail && (detail.UnitPrice || detail.Price)) || 0);
+    const savedAmount = Number((detail && (detail.LineAmount || detail.Amount)) || 0);
+    const unitPrice = savedPrice || (qty > 0 && savedAmount ? savedAmount / qty : 0);
+    return {
+      id: (detail && detail.DetailID) || Math.random().toString(36).slice(2, 10),
+      detailID: detail && detail.DetailID,
+      productID,
+      qty,
+      unitPrice
+    };
+  }
+
+  function resetOrderDraft(details) {
+    orderDraftRows = (details && details.length ? details : [null]).map(makeOrderDraftRow);
+    renderOrderEditorRows();
+  }
+
+  function calculateOrderTotal() {
+    return orderDraftRows.reduce((sum, row) => sum + (Number(row.qty || 0) * Number(row.unitPrice || 0)), 0);
+  }
+
+  function syncOrderTotal() {
+    const amount = document.getElementById('o-amount');
+    if (amount) amount.value = calculateOrderTotal().toFixed(2);
+  }
+
+  function updateOrderDraftFromDom() {
+    document.querySelectorAll('.order-edit-row').forEach(rowEl => {
+      const id = rowEl.dataset.rowId;
+      const row = orderDraftRows.find(r => r.id === id);
+      if (!row) return;
+      row.productID = rowEl.querySelector('.order-product-select').value;
+      row.qty = Number(rowEl.querySelector('.order-qty-input').value || 0);
+      row.unitPrice = Number(rowEl.querySelector('.order-price-input').value || 0);
+      const line = rowEl.querySelector('.order-line-total');
+      if (line) line.textContent = 'RM ' + (row.qty * row.unitPrice).toFixed(2);
+    });
+    syncOrderTotal();
+  }
+
+  function renderOrderEditorRows() {
+    const container = document.getElementById('order-item-editor');
+    if (!container) return;
+    container.innerHTML = orderDraftRows.map(row => `
+      <div class="order-edit-row" data-row-id="${row.id}">
+        <div class="order-edit-grid">
+          <div class="form-group">
+            <label class="form-label">${t('product')}</label>
+            <select class="order-product-select">${productOptions(row.productID)}</select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">${t('qty')}</label>
+            <input class="order-qty-input" type="number" min="1" inputmode="numeric" value="${Number(row.qty || 1)}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">${t('unitPrice')} (RM)</label>
+            <input class="order-price-input" type="number" min="0" step="0.01" inputmode="decimal" value="${Number(row.unitPrice || 0).toFixed(2)}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">${t('lineTotal')}</label>
+            <div class="order-line-total">RM ${(Number(row.qty || 0) * Number(row.unitPrice || 0)).toFixed(2)}</div>
+          </div>
+        </div>
+        <button class="order-row-remove" type="button" aria-label="Remove">×</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('select, input').forEach(el => {
+      el.addEventListener('input', updateOrderDraftFromDom);
+      el.addEventListener('change', updateOrderDraftFromDom);
+    });
+    container.querySelectorAll('.order-row-remove').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.closest('.order-edit-row').dataset.rowId;
+        if (orderDraftRows.length <= 1) {
+          showToast(t('fillAll'), 'err');
+          return;
+        }
+        orderDraftRows = orderDraftRows.filter(r => r.id !== id);
+        renderOrderEditorRows();
+      });
+    });
+    syncOrderTotal();
+  }
+
+  function collectOrderRows() {
+    updateOrderDraftFromDom();
+    const rows = orderDraftRows.map(row => ({
+      detailID: row.detailID,
+      ProductID: row.productID,
+      QTY: Number(row.qty || 0),
+      UnitPrice: Number(row.unitPrice || 0),
+      LineAmount: Number(row.qty || 0) * Number(row.unitPrice || 0)
+    })).filter(row => row.ProductID);
+    if (rows.length === 0 || rows.some(row => !row.QTY || row.QTY < 1)) {
+      throw new Error(t('qty'));
+    }
+    return rows;
+  }
+
+  async function postOrderDetail(detail) {
+    const fullPayload = {
+      DetailID: detail.DetailID,
+      POID: detail.POID,
+      ProductID: detail.ProductID,
+      QTY: detail.QTY,
+      UnitPrice: detail.UnitPrice,
+      LineAmount: detail.LineAmount
+    };
+    if (poDetailsAmountColumnsReady) {
+      try {
+        return await sbPost('po_details', fullPayload);
+      } catch (e) {
+        if (!String(e.message || '').includes('UnitPrice') && !String(e.message || '').includes('LineAmount')) throw e;
+        poDetailsAmountColumnsReady = false;
+      }
+    }
+    return sbPost('po_details', {
+      DetailID: detail.DetailID,
+      POID: detail.POID,
+      ProductID: detail.ProductID,
+      QTY: detail.QTY
+    });
   }
 
   function stockBadge(n) {
@@ -1157,6 +1323,11 @@ function applyPermissions() {
     }
     state.currentModal = modalId;
     document.getElementById(modalId).classList.add('open');
+    if (modalId === 'modal-order') {
+      document.getElementById('o-editing-poid').value = '';
+      document.getElementById('o-editing-detailid').value = '';
+      resetOrderDraft();
+    }
     // 打开 modal 后更新一次单位标签
     updateQtyLabels();
   }
@@ -1168,10 +1339,10 @@ function applyPermissions() {
       const title = document.querySelector('#modal-order .modal-title');
       if (title) title.textContent = t('newOrder');
       document.getElementById('btn-order').textContent = t('confirmOrder');
-      // 清空编辑行和 hidden，恢复新建行
+      document.getElementById('o-poid').value = '';
       document.getElementById('o-editing-poid').value = '';
-      document.getElementById('o-edit-rows').innerHTML = '';
-      document.getElementById('o-new-row-area').style.display = '';
+      document.getElementById('o-editing-detailid').value = '';
+      orderDraftRows = [];
     }
     if (state.currentModal) {
       document.getElementById(state.currentModal).classList.remove('open');
@@ -1311,70 +1482,76 @@ function applyPermissions() {
 
   async function submitOrder() {
     if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
-    const editingPOID = document.getElementById('o-editing-poid').value;
-
-    if (editingPOID) {
-      // === 编辑模式：更新整单 ===
-      const btn = document.getElementById('btn-order');
-      btn.disabled = true;
-      btn.textContent = t('submitting');
-      try {
-        // 更新总金额
-        await sbPatch('purchase_orders', 'POID', editingPOID, { TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
-
-        // 处理每一行编辑区域
-        const rows = document.querySelectorAll('#o-edit-rows .o-edit-row');
-        for (const row of rows) {
-          const detailId = row.dataset.detailid;
-          const prodEl = row.querySelector('.o-edit-prod');
-          const qtyEl = row.querySelector('.o-edit-qty');
-          const productID = prodEl.value;
-          const qty = parseInt(qtyEl.value);
-          if (!qty || qty < 1) continue;
-          await sbPatch('po_details', 'DetailID', detailId, { ProductID: productID, QTY: qty });
-        }
-
-        showToast(t('orderUpdated'), 'ok');
-      } catch (e) {
-        showToast(t('submitFail') + e.message, 'err');
-        btn.disabled = false;
-        btn.textContent = t('confirmOrder');
-        return;
-      }
-    } else {
-      // === 新建模式 ===
-      const qty = parseInt(document.getElementById('o-qty').value);
-      if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
-      const btn = document.getElementById('btn-order');
-      btn.disabled = true;
-      btn.textContent = t('ordering');
-      try {
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0,10);
-        const timeStr = now.toTimeString().slice(0,8);
-        const uid = Math.random().toString(36).slice(2, 6);
-        const poID = `PO-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
-        const detailID = Math.random().toString(36).slice(2, 10);
-        const productID = document.getElementById('o-prod').value;
-
-        await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
-        await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
-        showToast(t('orderSuccess'), 'ok');
-      } catch (e) {
-        showToast(t('submitFail') + e.message, 'err');
-        btn.disabled = false;
-        btn.textContent = t('confirmOrder');
-        return;
-      }
+    let rows = [];
+    try {
+      rows = collectOrderRows();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+      return;
     }
+    const btn = document.getElementById('btn-order');
+    btn.disabled = true;
+    btn.textContent = t('ordering');
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0,10);
+      const timeStr = now.toTimeString().slice(0,8);
+      const uid = Math.random().toString(36).slice(2, 6);
+      const requestedPOID = document.getElementById('o-poid').value.trim();
+      const poID = requestedPOID || `PO-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
+      const editingPOID = document.getElementById('o-editing-poid').value;
+      const totalAmount = rows.reduce((sum, row) => sum + row.LineAmount, 0);
 
-    // 重置
-    document.getElementById('o-qty').value = '';
-    document.getElementById('o-amount').value = '';
-    document.getElementById('o-editing-poid').value = '';
-    document.getElementById('o-edit-rows').innerHTML = '';
-    closeModal();
-    await loadAll();
+      if (editingPOID) {
+        const finalPOID = requestedPOID || editingPOID;
+        if (finalPOID !== editingPOID) {
+          const existing = await sbGetFiltered('purchase_orders', 'POID', finalPOID, { select: 'POID' });
+          if (existing && existing.length > 0) throw new Error('Invoice No 已存在');
+        }
+        await sbPatch('purchase_orders', 'POID', editingPOID, { POID: finalPOID, TotalAmount: totalAmount });
+        await sbDelete('po_details', 'POID', editingPOID).catch(() => {});
+        await sbDelete('po_details', 'POID', finalPOID).catch(() => {});
+        for (const row of rows) {
+          await postOrderDetail({
+            DetailID: row.detailID || Math.random().toString(36).slice(2, 10),
+            POID: finalPOID,
+            ProductID: row.ProductID,
+            QTY: row.QTY,
+            UnitPrice: row.UnitPrice,
+            LineAmount: row.LineAmount
+          });
+        }
+        showToast(t('orderUpdated'), 'ok');
+      } else {
+        const existing = await sbGetFiltered('purchase_orders', 'POID', poID, { select: 'POID' });
+        if (existing && existing.length > 0) throw new Error('Invoice No 已存在');
+        await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount });
+        for (const row of rows) {
+          await postOrderDetail({
+            DetailID: Math.random().toString(36).slice(2, 10),
+            POID: poID,
+            ProductID: row.ProductID,
+            QTY: row.QTY,
+            UnitPrice: row.UnitPrice,
+            LineAmount: row.LineAmount
+          });
+        }
+        showToast(t('orderSuccess'), 'ok');
+      }
+
+      document.getElementById('o-poid').value = '';
+      document.getElementById('o-amount').value = '';
+      document.getElementById('o-editing-poid').value = '';
+      document.getElementById('o-editing-detailid').value = '';
+      orderDraftRows = [];
+      closeModal();
+      await loadAll();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = t('confirmOrder');
+    }
   }
 
   // ============================================================
@@ -1422,35 +1599,14 @@ function applyPermissions() {
     const order = state.orders.find(o => o.POID === poID);
     if (!order) { showToast('订单不存在', 'err'); return; }
     const details = getOrderDetails(poID);
-    if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
+    if (!details.length) { showToast('订单无明细', 'err'); return; }
 
-    // 隐藏新建行
-    document.getElementById('o-new-row-area').style.display = 'none';
-
-    // 预填 hidden
-    document.getElementById('o-editing-poid').value = poID;
-
-    // 清空并填充编辑行
-    const container = document.getElementById('o-edit-rows');
-    container.innerHTML = details.map(d => {
-      const opts = Array.from(state.products.values()).map(p =>
-        `<option value="${p.ProductID}" ${p.ProductID === d.ProductID ? 'selected' : ''}>${escapeHTML(p.ProductName)} (${p.Grade || ''})</option>`
-      ).join('');
-      return `<div class="form-group o-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:8px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">
-        <div style="flex:1">
-          <label class="form-label" style="font-size:11px">产品</label>
-          <select class="o-edit-prod">${opts}</select>
-        </div>
-        <div style="width:100px">
-          <label class="form-label" style="font-size:11px">数量</label>
-          <input type="number" class="o-edit-qty" value="${d.QTY}" min="1" inputmode="numeric" style="width:100%">
-        </div>
-        <button class="del-btn" onclick="this.closest('.o-edit-row').remove()" style="margin-bottom:4px">✕</button>
-      </div>`;
-    }).join('');
-
-    // 预填总金额
+    // 预填 modal
+    document.getElementById('o-poid').value = poID;
     document.getElementById('o-amount').value = order.TotalAmount || '';
+    document.getElementById('o-editing-poid').value = poID;
+    document.getElementById('o-editing-detailid').value = '';
+    resetOrderDraft(details);
 
     // 更新标题与按钮文字
     const title = document.querySelector('#modal-order .modal-title');
@@ -1664,6 +1820,8 @@ function applyPermissions() {
     if (lblOrderProd) lblOrderProd.textContent = t('product');
     const lblOrderAmt = document.getElementById('lbl-order-amount');
     if (lblOrderAmt) lblOrderAmt.textContent = t('totalAmount');
+    const btnOrderAddItem = document.getElementById('btn-order-add-item');
+    if (btnOrderAddItem) btnOrderAddItem.textContent = '+ ' + t('addOrderItem');
 
     // 新增用户 modal
     const auTitle = document.querySelector('#modal-adduser .modal-title');
@@ -1765,11 +1923,14 @@ function applyPermissions() {
 
     // 产品选择 change 事件 → 更新数量单位标签
     document.getElementById('f-prod').addEventListener('change', updateQtyLabels);
-    document.getElementById('o-prod').addEventListener('change', updateQtyLabels);
 
     // 按钮
     document.getElementById('fab').addEventListener('click', openModal);
     document.getElementById('sync-btn').addEventListener('click', () => loadAll());
+    document.getElementById('btn-order-add-item').addEventListener('click', function() {
+      orderDraftRows.push(makeOrderDraftRow());
+      renderOrderEditorRows();
+    });
 
     // Modal 背景点击关闭
     document.querySelectorAll('.modal-bg').forEach(m => {
