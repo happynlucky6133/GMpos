@@ -859,6 +859,16 @@ function applyPermissions() {
     return rows;
   }
 
+  function hasOrderDraftData() {
+    const invoice = (document.getElementById('o-poid')?.value || '').trim();
+    if (invoice) return true;
+    return orderDraftRows.some(row =>
+      row.productID ||
+      Number(row.qty || 0) !== 1 ||
+      Number(row.unitPrice || 0) > 0
+    );
+  }
+
   async function postOrderDetail(detail) {
     const fullPayload = {
       DetailID: detail.DetailID,
@@ -1367,6 +1377,13 @@ function applyPermissions() {
       document.getElementById(state.currentModal).classList.remove('open');
       state.currentModal = null;
     }
+  }
+
+  function requestCloseModal() {
+    if (state.currentModal === 'modal-order' && hasOrderDraftData()) {
+      if (!confirm('确定取消这张出货单？已输入的内容会清空。')) return;
+    }
+    closeModal();
   }
 
   // ============================================================
@@ -1955,10 +1972,12 @@ function applyPermissions() {
       renderOrderEditorRows();
     });
 
-    // Modal 背景点击关闭
+    // Modal 背景点击关闭；出货单禁止点背景关闭，避免进单时误触丢失草稿
     document.querySelectorAll('.modal-bg').forEach(m => {
       m.addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
+        if (e.target !== this) return;
+        if (this.id === 'modal-order') return;
+        closeModal();
       });
     });
 
@@ -1972,7 +1991,7 @@ function applyPermissions() {
 
     // 取消按钮关闭
     document.querySelectorAll('.btn-cancel').forEach(btn => {
-      btn.addEventListener('click', closeModal);
+      btn.addEventListener('click', requestCloseModal);
     });
 
     // 应用当前语言
