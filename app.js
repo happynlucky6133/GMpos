@@ -62,6 +62,14 @@
       confirmOrder: '出货',
       ordering: '出货中...',
       orderSuccess: '出货 已创建！',
+      orderPending: '待确认',
+      orderDone: '已完成',
+      orderCancelled: '已取消',
+      orderConfirm: '确认完成',
+      orderCancel: '取消',
+      orderEdit: '编辑',
+      editOrder: '编辑出货',
+      orderUpdated: '订单已更新！',
       searchInvoice: '搜索 Invoice No...',
       totalAmount: '总金额 (RM)',
       noOrders: '暂无出货记录',
@@ -889,16 +897,34 @@ function applyPermissions() {
       const qty = d ? d.QTY : '-';
       const date = String(o.Date).slice(0,10);
       const unit = d ? getProdUnit(d.ProductID) : 'kg';
+      const status = o.Status || 'pending';
+      let statusBadge = '';
+      let actions = '';
+      if (status === 'pending') {
+        statusBadge = '<span class="badge badge-pending">' + t('orderPending') + '</span>';
+        actions += `<button class="btn-sm btn-ok" onclick="window.confirmOrder('${o.POID}')">${t('orderConfirm')}</button>`;
+        actions += `<button class="btn-sm btn-edit" onclick="window.editOrder('${o.POID}')">${t('orderEdit')}</button>`;
+        if (isAdmin()) {
+          actions += `<button class="btn-sm btn-cancel" onclick="window.cancelOrder('${o.POID}')">${t('orderCancel')}</button>`;
+        }
+      } else if (status === 'cancelled') {
+        statusBadge = '<span class="badge badge-cancelled">' + t('orderCancelled') + '</span>';
+      } else {
+        statusBadge = '<span class="badge badge-done">' + t('orderDone') + '</span>';
+      }
 
       return `<div class="card">
         <div class="row-flex" style="margin-bottom:5px">
-      <span class="mono">${o.POID}</span>
+          <span class="mono">${o.POID}</span>
+          ${statusBadge}
           ${isAdmin() ? `<button class="del-btn sm" data-type="order" data-id="${o.POID}">✕</button>` : ''}
         </div>
         <div style="font-size:13px">${productName} · <strong>${qty} ${unit}</strong></div>
         <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
+        ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
+    attachDeleteHandlers(container);
   }
 
   // ============================================================
@@ -925,7 +951,7 @@ function applyPermissions() {
     container.innerHTML = '<div class="loading">' + t('loading') + '</div>';
 
     try {
-      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&select=POID,TotalAmount';
+      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&select=POID,TotalAmount';
       const res = await fetch(url, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
@@ -1050,6 +1076,12 @@ function applyPermissions() {
   }
 
   function closeModal() {
+    if (state.currentModal === 'modal-order') {
+      // 恢复标题与按钮文字
+      const title = document.querySelector('#modal-order .modal-title');
+      if (title) title.textContent = t('newOrder');
+      document.getElementById('btn-order').textContent = t('confirmOrder');
+    }
     if (state.currentModal) {
       document.getElementById(state.currentModal).classList.remove('open');
       state.currentModal = null;
@@ -1202,19 +1234,23 @@ function applyPermissions() {
       const detailID = Math.random().toString(36).slice(2, 10);
       const productID = document.getElementById('o-prod').value;
       const unit = getProdUnit(productID);
+      const editingPOID = document.getElementById('o-editing-poid').value;
 
-      await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'done', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
-      await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
-
-      // 创建即扣库存
-      const prod = getProd(productID);
-      if (prod) {
-        const newBalance = (Number(prod.StockBalance) || 0) - qty;
-        await sbPatch('products', 'ProductID', productID, { StockBalance: newBalance });
+      if (editingPOID) {
+        // 编辑已有 pending 订单
+        await sbPatch('purchase_orders', 'POID', editingPOID, { TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
+        await sbPatch('po_details', 'DetailID', document.getElementById('o-editing-detailid').value, { ProductID: productID, QTY: qty });
+        showToast(t('orderUpdated'), 'ok');
+      } else {
+        await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: parseFloat(document.getElementById('o-amount').value) || 0 });
+        await sbPost('po_details', { DetailID: detailID, POID: poID, ProductID: productID, QTY: qty });
+        showToast(t('orderSuccess'), 'ok');
       }
 
-      showToast(t('orderSuccess'), 'ok');
       document.getElementById('o-qty').value = '';
+      document.getElementById('o-amount').value = '';
+      document.getElementById('o-editing-poid').value = '';
+      document.getElementById('o-editing-detailid').value = '';
       closeModal();
       await loadAll();
     } catch (e) {
@@ -1223,6 +1259,71 @@ function applyPermissions() {
     btn.disabled = false;
     btn.textContent = t('confirmOrder');
   }
+
+  // ============================================================
+  // 确认完成 / 取消 / 编辑订单
+  // ============================================================
+  window.confirmOrder = async function(poID) {
+    if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
+    try {
+      // 获取订单详情
+      const details = await sbGetFiltered('po_details', 'POID', poID);
+      if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
+
+      // 逐条扣库存
+      for (const d of details) {
+        const prod = getProd(d.ProductID);
+        if (prod) {
+          const newBalance = (Number(prod.StockBalance) || 0) - d.QTY;
+          await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
+        }
+      }
+
+      // 改状态为 done
+      await sbPatch('purchase_orders', 'POID', poID, { Status: 'done' });
+      showToast(t('orderConfirm') + ' ✅', 'ok');
+      await loadAll();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+    }
+  };
+
+  window.cancelOrder = async function(poID) {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    if (!confirm('确定取消此订单？')) return;
+    try {
+      await sbPatch('purchase_orders', 'POID', poID, { Status: 'cancelled' });
+      showToast(t('orderCancel') + ' ✅', 'ok');
+      await loadAll();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+    }
+  };
+
+  window.editOrder = function(poID) {
+    const order = state.orders.find(o => o.POID === poID);
+    if (!order) { showToast('订单不存在', 'err'); return; }
+    const detail = state.orderDetails.get(poID);
+    if (!detail) { showToast('订单无明细', 'err'); return; }
+
+    // 预填 modal
+    document.getElementById('o-prod').value = detail.ProductID;
+    document.getElementById('o-qty').value = detail.QTY;
+    document.getElementById('o-amount').value = order.TotalAmount || '';
+    document.getElementById('o-editing-poid').value = poID;
+    document.getElementById('o-editing-detailid').value = detail.DetailID;
+
+    // 更新标题与按钮文字
+    const title = document.querySelector('#modal-order .modal-title');
+    if (title) title.textContent = t('editOrder');
+    document.getElementById('btn-order').textContent = t('orderUpdated') + ' ✓';
+
+    // 更新标签
+    updateQtyLabels();
+    // 打开 modal
+    document.getElementById('modal-order').classList.add('open');
+    state.currentModal = 'modal-order';
+  };
 
   // ============================================================
   // 删除功能（仅 admin）
