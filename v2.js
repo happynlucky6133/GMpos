@@ -12,8 +12,8 @@
       close: '知道了'
     },
     id: {
-      debt: 'Backorder',
-      debtHint: 'Stok negatif diizinkan: barang sudah keluar dan menunggu pengisian stok.',
+      debt: 'Stok Minus',
+      debtHint: 'Stok minus diizinkan: barang sudah keluar dan sedang menunggu tambah stok.',
       secureTitle: 'Catatan keamanan V2',
       secureBody: 'Versi ini masih terhubung langsung dari frontend ke database. Pastikan Supabase RLS aktif dan aturan akses tabel sudah dibatasi.',
       close: 'Mengerti'
@@ -155,9 +155,10 @@
       if (!card.querySelector('.v2-backorder-note')) {
         const note = document.createElement('div');
         note.className = 'v2-backorder-note';
-        note.textContent = tx('debtHint');
         card.appendChild(note);
       }
+      const note = card.querySelector('.v2-backorder-note');
+      if (note) note.textContent = tx('debtHint');
     });
   }
 

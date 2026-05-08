@@ -13,6 +13,7 @@
       password: '密码',
       loginSub: '请登录以继续',
       loginBtn: '登录',
+      appTitle: 'GMPos 库存',
       loginErr: '请输入用户名和密码',
       userNotFound: '用户不存在',
       wrongPwd: '密码错误',
@@ -46,6 +47,10 @@
       loading: '加载中...',
       synced: '已同步',
       loadFailed: '加载失败',
+      refresh: '刷新',
+      productNamePlaceholder: '输入产品名称',
+      gradePlaceholder: '输入等级（如 A、B、C 或自定义）',
+      negativeStockNote: '允许负库存：货物已出，等待补货。',
       // 进货
       newStockin: '新增进货',
       confirmStockin: '确认进货',
@@ -176,6 +181,7 @@
       password: 'Kata Sandi',
       loginSub: 'Silakan masuk untuk melanjutkan',
       loginBtn: 'Masuk',
+      appTitle: 'GMPos Stok',
       loginErr: 'Masukkan nama pengguna dan kata sandi',
       userNotFound: 'Pengguna tidak ditemukan',
       wrongPwd: 'Kata sandi salah',
@@ -207,6 +213,10 @@
       loading: 'Memuat...',
       synced: 'Sinkron',
       loadFailed: 'Gagal muat',
+      refresh: 'Segarkan',
+      productNamePlaceholder: 'Masukkan nama produk',
+      gradePlaceholder: 'Masukkan grade (mis. A, B, C atau lainnya)',
+      negativeStockNote: 'Stok negatif diizinkan: barang sudah keluar dan menunggu pengisian stok.',
       newStockin: 'Tambah Stok Masuk',
       confirmStockin: 'Simpan Masuk',
       submitting: 'Mengirim...',
@@ -329,6 +339,7 @@
       password: 'Password',
       loginSub: 'Please login to continue',
       loginBtn: 'Login',
+      appTitle: 'GMPos Inventory',
       loginErr: 'Enter username and password',
       userNotFound: 'User not found',
       wrongPwd: 'Wrong password',
@@ -360,6 +371,10 @@
       loading: 'Loading...',
       synced: 'Synced',
       loadFailed: 'Load failed',
+      refresh: 'Refresh',
+      productNamePlaceholder: 'Enter product name',
+      gradePlaceholder: 'Enter grade (e.g. A, B, C or custom)',
+      negativeStockNote: 'Negative stock is allowed: goods are already out and waiting for replenishment.',
       newStockin: 'New Stock In',
       confirmStockin: 'Confirm Stock In',
       submitting: 'Submitting...',
@@ -776,7 +791,7 @@ function applyPermissions() {
     }
 
     btn.disabled = false;
-    btn.textContent = '↻ ' + t('刷新');
+    btn.textContent = '↻ ' + t('refresh');
     state.loading = false;
   }
 
@@ -2402,11 +2417,16 @@ function applyPermissions() {
   // ============================================================
   function applyLang() {
     // 登录页
+    const loginTitle = document.querySelector('.login-title');
+    if (loginTitle) loginTitle.textContent = t('appTitle');
+    const headerTitle = document.querySelector('.header-title');
+    if (headerTitle) headerTitle.textContent = t('appTitle');
     document.getElementById('label-user').textContent = t('username');
     document.getElementById('label-pass').textContent = t('password');
     document.getElementById('login-sub').textContent = t('loginSub');
     document.getElementById('login-btn').textContent = t('loginBtn');
     document.getElementById('login-user').placeholder = t('username');
+    document.getElementById('login-pass').placeholder = t('password');
 
     // 更新语言按钮高亮
     document.querySelectorAll('.lang-btn').forEach(b => {
@@ -2473,10 +2493,14 @@ function applyPermissions() {
     if (prodCancel) prodCancel.textContent = t('cancel');
     const lblProdName = document.getElementById('lbl-prod-name');
     if (lblProdName) lblProdName.textContent = t('productName');
+    const npName = document.getElementById('np-name');
+    if (npName) npName.placeholder = t('productNamePlaceholder');
     const lblProdGrade = document.getElementById('lbl-prod-grade');
     if (lblProdGrade) lblProdGrade.textContent = t('grade');
+    const npGrade = document.getElementById('np-grade');
+    if (npGrade) npGrade.placeholder = t('gradePlaceholder');
     const lblProdUnit = document.getElementById('lbl-prod-unit');
-    if (lblProdUnit) lblProdUnit.textContent = t('unit_pcs');
+    if (lblProdUnit) lblProdUnit.textContent = 'Unit';
 
     // 编辑产品 modal
     const editProdTitle = document.querySelector('#modal-edit-prod .modal-title');
@@ -2488,8 +2512,12 @@ function applyPermissions() {
     const editProdLabels = document.querySelectorAll('#modal-edit-prod .form-label');
     if (editProdLabels[0]) editProdLabels[0].textContent = t('productName');
     if (editProdLabels[1]) editProdLabels[1].textContent = t('grade');
-    if (editProdLabels[2]) editProdLabels[2].textContent = t('unit_pcs');
+    if (editProdLabels[2]) editProdLabels[2].textContent = 'Unit';
     if (editProdLabels[3]) editProdLabels[3].textContent = t('stockQty');
+    const epName = document.getElementById('ep-name');
+    if (epName) epName.placeholder = t('productNamePlaceholder');
+    const epGrade = document.getElementById('ep-grade');
+    if (epGrade) epGrade.placeholder = t('gradePlaceholder');
 
     // 合并 SKU modal
     const mergeTitle = document.querySelector('#modal-merge-sku .modal-title');
