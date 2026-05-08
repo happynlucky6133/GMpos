@@ -1,11 +1,12 @@
-/* ===== GMPos Service Worker v1 ===== */
-const CACHE = 'ycpos-v6';
+/* ===== GMPos Service Worker v2 ===== */
+const CACHE = 'gmpos-v2-static';
 const STATIC_ASSETS = [
   '.',
   './index.html',
   './manifest.json',
   './style.css',
   './app.js',
+  './v2.js',
   './icon-192.png',
   './icon-512.png'
 ];
@@ -47,9 +48,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // API 请求：网络优先，失败时尝试缓存
+  // API 请求：只走网络，不缓存库存、用户、订单等业务数据
   if (url.includes('supabase.co')) {
-    e.respondWith(networkFirstWithCacheFallback(e.request));
+    e.respondWith(fetch(e.request));
     return;
   }
 
@@ -57,28 +58,9 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request)
       .then(cached => cached || fetchAndCache(e.request))
-      .catch(() => caches.match(e.request))
+      .catch(() => caches.match('./index.html'))
   );
 });
-
-// ============================================================
-// 网络优先策略（适用于 API）
-// ============================================================
-async function networkFirstWithCacheFallback(request) {
-  try {
-    const response = await fetch(request);
-    // 只缓存成功的响应
-    if (response.ok) {
-      const cache = await caches.open(CACHE);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch (err) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    throw err;
-  }
-}
 
 // ============================================================
 // 请求并缓存（适用于静态资源）
