@@ -1208,7 +1208,7 @@ function applyPermissions() {
         <div class="row-flex" style="margin-bottom:5px">
           <span class="mono">${o.POID}</span>
           ${statusBadge}
-          ${isAdmin() && status === 'pending' ? `<button class="del-btn sm" onclick="window.deleteOrder('${o.POID}')">✕</button>` : ''}
+          ${isAdmin() ? `<button class="del-btn sm" onclick="window.deleteOrder('${o.POID}')">✕</button>` : ''}
         </div>
         <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
         <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
@@ -1860,7 +1860,13 @@ function applyPermissions() {
   // 删除订单（admin，硬删除 purchase_orders + po_details）
   window.deleteOrder = async function(poID) {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
-    if (!confirm('确定删除此订单？不可恢复。')) return;
+    // 找到订单状态
+    const order = state.orders.find(o => o.POID === poID);
+    const status = order ? order.Status : 'unknown';
+    const msg = status === 'done'
+      ? `⚠️ 此订单已确认完成！\n确定删除 ${poID}？\n（库存将不会自动恢复，请手动调整）`
+      : `确定删除此订单 ${poID}？不可恢复。`;
+    if (!confirm(msg)) return;
     try {
       await sbDelete('po_details', 'POID', poID);
       await sbDelete('purchase_orders', 'POID', poID);
