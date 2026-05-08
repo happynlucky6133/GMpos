@@ -654,7 +654,11 @@ function applyPermissions() {
     state.products = new Map((data.products || []).map(p => [p.ProductID, p]));
     state.suppliers = new Map((data.suppliers || []).map(s => [s.SupplierID, s]));
     state.stockIns = data.stockIns || [];
-    state.stockInDetails = new Map((data.stockInDetails || []).map(d => [d.StockInID, d]));
+    state.stockInDetails = new Map();
+    (data.stockInDetails || []).forEach(d => {
+      if (!state.stockInDetails.has(d.StockInID)) state.stockInDetails.set(d.StockInID, []);
+      state.stockInDetails.get(d.StockInID).push(d);
+    });
     state.orders = data.orders || [];
     state.orderDetails = new Map();
     (data.orderDetails || []).forEach(d => {
@@ -712,6 +716,16 @@ function applyPermissions() {
     return getOrderDetails(poID)[0] || null;
   }
 
+  function getStockInDetails(siID) {
+    const details = state.stockInDetails.get(siID);
+    if (!details) return [];
+    return Array.isArray(details) ? details : [details];
+  }
+
+  function getFirstStockInDetail(siID) {
+    return getStockInDetails(siID)[0] || null;
+  }
+
   function renderOrderDetailsHtml(poID) {
     const details = getOrderDetails(poID);
     if (details.length === 0) return '<div style="font-size:13px">-</div>';
@@ -723,6 +737,19 @@ function applyPermissions() {
       return `<div class="order-detail-line">
         <span>${productName}</span>
         <strong>${Number(d.QTY || 0)} ${unit}${money}</strong>
+      </div>`;
+    }).join('');
+  }
+
+  function renderStockInDetailsHtml(siID) {
+    const details = getStockInDetails(siID);
+    if (details.length === 0) return '<div style="font-size:13px">-</div>';
+    return details.map(d => {
+      const productName = escapeHTML(getProdName(d.ProductID));
+      const unit = getProdUnit(d.ProductID);
+      return `<div class="order-detail-line">
+        <span>${productName}</span>
+        <strong>${Number(d.Qty || 0)} ${unit}</strong>
       </div>`;
     }).join('');
   }
@@ -1108,28 +1135,43 @@ function applyPermissions() {
   function renderStockIn() {
     const q = (document.getElementById('stockin-search').value || '').toLowerCase();
     const container = document.getElementById('stockin-list');
-    const list = state.stockIns.filter(s => s.StockInID.toLowerCase().includes(q));
+    const list = state.stockIns.filter(s =>
+      s.StockInID.toLowerCase().includes(q) ||
+      getSupName(s.SupplierID).toLowerCase().includes(q)
+    );
     if (list.length === 0) {
       container.innerHTML = '<div class="empty">' + t('noStockin') + '</div>';
       return;
     }
     container.innerHTML = [...list].reverse().map(s => {
-      const d = state.stockInDetails.get(s.StockInID);
+      const date = String(s.Date).slice(0,10);
+      const status = s.Status || 'pending';
+      let statusBadge = '';
+      let actions = '';
+      if (status === 'pending') {
+        statusBadge = '<span class="badge badge-pending">等待确认</span>';
+        actions += `<button class="btn-sm btn-ok" onclick="window.confirmStockIn('${s.StockInID}')">${t('confirmStockin')}</button>`;
+        actions += `<button class="btn-sm btn-edit" onclick="window.editStockIn('${s.StockInID}')">${t('orderEdit')}</button>`;
+        if (isAdmin()) {
+          actions += `<button class="btn-sm btn-cancel" onclick="window.cancelStockIn('${s.StockInID}')">${t('orderCancel')}</button>`;
+        }
+      } else if (status === 'cancelled') {
+        statusBadge = '<span class="badge badge-cancelled">' + t('orderCancelled') + '</span>';
+      } else {
+        statusBadge = '<span class="badge badge-done">' + t('orderDone') + '</span>';
+      }
+
       return `<div class="card">
         <div class="row-flex" style="margin-bottom:5px">
           <span class="mono">${s.StockInID}</span>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:11px;color:var(--text2)">${String(s.Date).slice(0,10)}</span>
-            ${isAdmin() ? `<button class="del-btn sm" data-type="stockin" data-id="${s.StockInID}">✕</button>` : ''}
-          </div>
+          ${statusBadge}
+          ${isAdmin() && status === 'pending' ? `<button class="del-btn sm" onclick="window.deleteStockIn('${s.StockInID}')">✕</button>` : ''}
         </div>
-        <div style="font-size:13px">
-          ${d ? escapeHTML(getProdName(d.ProductID)) : '-'} · <strong>${d ? d.Qty + ' ' + getProdUnit(d.ProductID) : '-'}</strong>
-        </div>
-        <div class="row-sub">${escapeHTML(getSupName(s.SupplierID))}</div>
+        <div class="order-detail-list">${renderStockInDetailsHtml(s.StockInID)}</div>
+        <div class="row-sub">${escapeHTML(getSupName(s.SupplierID))} · ${date}${s.TotalAmount ? ' · RM' + Number(s.TotalAmount).toFixed(2) : ''}</div>
+        ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
-    attachDeleteHandlers(container);
   }
 
   function renderOrders() {
@@ -1362,9 +1404,9 @@ function applyPermissions() {
   }
 
   function closeModal() {
-    const wasEdit = state.currentModal === 'modal-order';
-    if (wasEdit) {
-      // 恢复标题与按钮文字
+    const wasOrderEdit = state.currentModal === 'modal-order';
+    const wasStockInEdit = state.currentModal === 'modal-si';
+    if (wasOrderEdit) {
       const title = document.querySelector('#modal-order .modal-title');
       if (title) title.textContent = t('newOrder');
       document.getElementById('btn-order').textContent = t('confirmOrder');
@@ -1372,6 +1414,15 @@ function applyPermissions() {
       document.getElementById('o-editing-poid').value = '';
       document.getElementById('o-editing-detailid').value = '';
       orderDraftRows = [];
+    }
+    if (wasStockInEdit) {
+      const title = document.querySelector('#modal-si .modal-title');
+      if (title) title.textContent = '新增进货';
+      document.getElementById('btn-si').textContent = t('confirmStockin');
+      document.getElementById('f-editing-siid').value = '';
+      document.getElementById('si-edit-rows').innerHTML = '';
+      document.getElementById('si-new-row-area').style.display = '';
+      document.getElementById('f-amount').value = '';
     }
     if (state.currentModal) {
       document.getElementById(state.currentModal).classList.remove('open');
@@ -1391,40 +1442,165 @@ function applyPermissions() {
   // ============================================================
   async function submitStockIn() {
     if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
-    const qty = parseInt(document.getElementById('f-qty').value);
-    if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
-    const btn = document.getElementById('btn-si');
-    btn.disabled = true;
-    btn.textContent = t('submitting');
+    const editingSIID = document.getElementById('f-editing-siid').value;
+
+    if (editingSIID) {
+      // === 编辑模式：更新 pending 进货单 ===
+      const btn = document.getElementById('btn-si');
+      btn.disabled = true;
+      btn.textContent = t('submitting');
+      try {
+        await sbPatch('stock_ins', 'StockInID', editingSIID, {
+          TotalAmount: parseFloat(document.getElementById('f-amount').value) || 0
+        });
+        const rows = document.querySelectorAll('#si-edit-rows .si-edit-row');
+        for (const row of rows) {
+          const detailId = row.dataset.detailid;
+          const prodEl = row.querySelector('.si-edit-prod');
+          const qtyEl = row.querySelector('.si-edit-qty');
+          const productID = prodEl.value;
+          const qty = parseInt(qtyEl.value);
+          if (!qty || qty < 1) continue;
+          await sbPatch('stock_in_details', 'DetailID', detailId, { ProductID: productID, Qty: qty });
+        }
+        showToast(t('orderUpdated'), 'ok');
+      } catch (e) {
+        showToast(t('submitFail') + e.message, 'err');
+        btn.disabled = false;
+        btn.textContent = t('confirmStockin');
+        return;
+      }
+    } else {
+      // === 新建模式：创建 pending 进货单（不扣库存） ===
+      const qty = parseInt(document.getElementById('f-qty').value);
+      if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
+      const btn = document.getElementById('btn-si');
+      btn.disabled = true;
+      btn.textContent = t('submitting');
+      try {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0,10);
+        const timeStr = now.toTimeString().slice(0,8);
+        const uid = Math.random().toString(36).slice(2, 6);
+        const stockInID = `S01-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
+        const detailID = Math.random().toString(36).slice(2, 10);
+        const supplierID = document.getElementById('f-sup').value;
+        const productID = document.getElementById('f-prod').value;
+
+        await sbPost('stock_ins', {
+          StockInID: stockInID, Date: dateStr, Time: timeStr,
+          SupplierID: supplierID, Status: 'pending',
+          TotalAmount: parseFloat(document.getElementById('f-amount').value) || 0
+        });
+        await sbPost('stock_in_details', {
+          DetailID: detailID, StockInID: stockInID, ProductID: productID, Qty: qty
+        });
+        // NO stock balance change here!
+        showToast(t('stockinSuccess'), 'ok');
+      } catch (e) {
+        showToast(t('submitFail') + e.message, 'err');
+        btn.disabled = false;
+        btn.textContent = t('confirmStockin');
+        return;
+      }
+    }
+
+    // 重置
+    document.getElementById('f-qty').value = '';
+    document.getElementById('f-amount').value = '';
+    document.getElementById('f-editing-siid').value = '';
+    document.getElementById('si-edit-rows').innerHTML = '';
+    closeModal();
+    await loadAll();
+  }
+
+  // ============================================================
+  // 进货确认 / 取消 / 编辑 / 删除
+  // ============================================================
+  window.confirmStockIn = async function(stockInID) {
+    if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
     try {
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0,10);
-      const timeStr = now.toTimeString().slice(0,8);
-      const uid = Math.random().toString(36).slice(2, 6);
-      const stockInID = `S01-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
-      const detailID = Math.random().toString(36).slice(2, 10);
-      const supplierID = document.getElementById('f-sup').value;
-      const productID = document.getElementById('f-prod').value;
-      const unit = getProdUnit(productID);
+      const details = await sbGetFiltered('stock_in_details', 'StockInID', stockInID);
+      if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
 
-      await sbPost('stock_ins', { StockInID: stockInID, Date: dateStr, Time: timeStr, SupplierID: supplierID });
-      await sbPost('stock_in_details', { DetailID: detailID, StockInID: stockInID, ProductID: productID, Qty: qty });
-
-      const prod = getProd(productID);
-      if (prod) {
-        await sbPatch('products', 'ProductID', productID, { StockBalance: (Number(prod.StockBalance) || 0) + qty });
+      for (const d of details) {
+        const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
+        if (prod && prod.length > 0) {
+          const currentStock = Number(prod[0].StockBalance) || 0;
+          const newBalance = currentStock + Number(d.Qty || 0);
+          await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
+        }
       }
 
-      showToast(t('stockinSuccess'), 'ok');
-      document.getElementById('f-qty').value = '';
-      closeModal();
+      await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'done' });
+      showToast(t('confirmStockin') + ' ✅', 'ok');
       await loadAll();
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
     }
-    btn.disabled = false;
-    btn.textContent = t('confirmStockin');
-  }
+  };
+
+  window.cancelStockIn = async function(stockInID) {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    if (!confirm('确定取消此进货单？')) return;
+    try {
+      await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'cancelled' });
+      showToast(t('orderCancel') + ' ✅', 'ok');
+      await loadAll();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+    }
+  };
+
+  window.editStockIn = function(stockInID) {
+    const si = state.stockIns.find(s => s.StockInID === stockInID);
+    if (!si) { showToast('进货单不存在', 'err'); return; }
+    const details = getStockInDetails(stockInID);
+    if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
+
+    document.getElementById('si-new-row-area').style.display = 'none';
+    document.getElementById('f-editing-siid').value = stockInID;
+
+    const container = document.getElementById('si-edit-rows');
+    container.innerHTML = details.map(d => {
+      const opts = Array.from(state.products.values()).map(p =>
+        `<option value="${p.ProductID}" ${p.ProductID === d.ProductID ? 'selected' : ''}>${escapeHTML(p.ProductName)} (${p.Grade || ''})</option>`
+      ).join('');
+      return `<div class="form-group si-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:8px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">
+        <div style="flex:1">
+          <label class="form-label" style="font-size:11px">产品</label>
+          <select class="si-edit-prod">${opts}</select>
+        </div>
+        <div style="width:100px">
+          <label class="form-label" style="font-size:11px">数量</label>
+          <input type="number" class="si-edit-qty" value="${d.Qty}" min="1" inputmode="numeric" style="width:100%">
+        </div>
+        <button class="del-btn" onclick="this.closest('.si-edit-row').remove()" style="margin-bottom:4px">✕</button>
+      </div>`;
+    }).join('');
+
+    document.getElementById('f-amount').value = si.TotalAmount || '';
+    const title = document.querySelector('#modal-si .modal-title');
+    if (title) title.textContent = '编辑进货单';
+    document.getElementById('btn-si').textContent = '保存更改';
+    document.getElementById('f-sup').value = si.SupplierID || '';
+
+    document.getElementById('modal-si').classList.add('open');
+    state.currentModal = 'modal-si';
+  };
+
+  window.deleteStockIn = async function(stockInID) {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    if (!confirm('确定删除此进货单？不可恢复。')) return;
+    try {
+      await sbDelete('stock_in_details', 'StockInID', stockInID);
+      await sbDelete('stock_ins', 'StockInID', stockInID);
+      showToast(t('deleteSuccess'), 'ok');
+      await loadAll();
+    } catch (e) {
+      showToast(t('deleteFail') + e.message, 'err');
+    }
+  };
 
   async function submitProduct() {
     if (!canUseModal('modal-prod')) { showToast(t('noPermission'), 'err'); return; }

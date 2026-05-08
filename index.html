@@ -138,13 +138,28 @@
 <div class="toast" id="toast"></div>
 
 <!-- 进货 Modal -->
+<!-- 进货 Modal (multi-item pending→confirm) -->
 <div class="modal-bg" id="modal-si">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">新增进货</div>
-    <div class="form-group"><label class="form-label" id="lbl-si-supplier">供应商</label><select id="f-sup"></select></div>
-    <div class="form-group"><label class="form-label" id="lbl-si-product">产品</label><select id="f-prod"></select></div>
-    <div class="form-group"><label class="form-label" id="f-qty-label">数量</label><input type="number" id="f-qty" placeholder="0" min="1" inputmode="numeric"></div>
+    <!-- Supplier selection (header-level) -->
+    <div class="form-group">
+      <label class="form-label" id="lbl-si-supplier">供应商</label>
+      <select id="f-sup"></select>
+    </div>
+    <!-- New item row area -->
+    <div id="si-new-row-area" class="form-group">
+      <div style="display:flex;gap:8px;align-items:end">
+        <div style="flex:1"><label class="form-label" id="lbl-si-product">产品</label><select id="f-prod"></select></div>
+        <div style="width:100px"><label class="form-label" id="f-qty-label">数量</label><input type="number" id="f-qty" placeholder="0" min="1" inputmode="numeric" style="width:100%"></div>
+      </div>
+    </div>
+    <!-- Optional total amount -->
+    <div class="form-group"><label class="form-label" id="lbl-si-amount">总金额 (RM)</label><input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
+    <!-- Edit mode: multi-row fill -->
+    <div id="si-edit-rows"></div>
+    <input type="hidden" id="f-editing-siid" value="">
     <button class="btn-primary" id="btn-si">确认进货</button>
     <button class="btn-cancel" id="btn-si-cancel">取消</button>
   </div>
