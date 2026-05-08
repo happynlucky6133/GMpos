@@ -153,8 +153,11 @@
       <div style="display:flex;gap:8px;align-items:end">
         <div style="flex:1"><label class="form-label" id="lbl-si-product">产品</label><select id="f-prod"></select></div>
         <div style="width:100px"><label class="form-label" id="f-qty-label">数量</label><input type="number" id="f-qty" placeholder="0" min="1" inputmode="numeric" style="width:100%"></div>
+        <button class="btn-secondary" type="button" id="btn-si-add-item" style="margin-bottom:4px;white-space:nowrap">+ 添加</button>
       </div>
     </div>
+    <!-- Pending items list -->
+    <div id="si-pending-items"></div>
     <!-- Optional total amount -->
     <div class="form-group"><label class="form-label" id="lbl-si-amount">总金额 (RM)</label><input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
     <!-- Edit mode: multi-row fill -->

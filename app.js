@@ -1450,9 +1450,13 @@ function applyPermissions() {
       btn.disabled = true;
       btn.textContent = t('submitting');
       try {
+        // 保存供应商和总金额
         await sbPatch('stock_ins', 'StockInID', editingSIID, {
+          SupplierID: document.getElementById('f-sup').value,
           TotalAmount: parseFloat(document.getElementById('f-amount').value) || 0
         });
+        // 收集所有还留在画面上的 detailId
+        const keptDetailIds = new Set();
         const rows = document.querySelectorAll('#si-edit-rows .si-edit-row');
         for (const row of rows) {
           const detailId = row.dataset.detailid;
@@ -1461,7 +1465,15 @@ function applyPermissions() {
           const productID = prodEl.value;
           const qty = parseInt(qtyEl.value);
           if (!qty || qty < 1) continue;
+          keptDetailIds.add(detailId);
           await sbPatch('stock_in_details', 'DetailID', detailId, { ProductID: productID, Qty: qty });
+        }
+        // 删除数据库中不在画面上的明细
+        const allDetails = getStockInDetails(editingSIID) || [];
+        for (const d of allDetails) {
+          if (!keptDetailIds.has(d.DetailID)) {
+            await sbDelete('stock_in_details', 'DetailID', d.DetailID);
+          }
         }
         showToast(t('orderUpdated'), 'ok');
       } catch (e) {
@@ -1472,8 +1484,7 @@ function applyPermissions() {
       }
     } else {
       // === 新建模式：创建 pending 进货单（不扣库存） ===
-      const qty = parseInt(document.getElementById('f-qty').value);
-      if (!qty || qty < 1) { showToast(t('submitFail') + t('qty'), 'err'); return; }
+      if (siPendingItems.length === 0) { showToast('请至少添加一个产品', 'err'); return; }
       const btn = document.getElementById('btn-si');
       btn.disabled = true;
       btn.textContent = t('submitting');
@@ -1483,18 +1494,21 @@ function applyPermissions() {
         const timeStr = now.toTimeString().slice(0,8);
         const uid = Math.random().toString(36).slice(2, 6);
         const stockInID = `S01-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
-        const detailID = Math.random().toString(36).slice(2, 10);
         const supplierID = document.getElementById('f-sup').value;
-        const productID = document.getElementById('f-prod').value;
 
         await sbPost('stock_ins', {
           StockInID: stockInID, Date: dateStr, Time: timeStr,
           SupplierID: supplierID, Status: 'pending',
           TotalAmount: parseFloat(document.getElementById('f-amount').value) || 0
         });
-        await sbPost('stock_in_details', {
-          DetailID: detailID, StockInID: stockInID, ProductID: productID, Qty: qty
-        });
+        for (const item of siPendingItems) {
+          const detailID = Math.random().toString(36).slice(2, 10);
+          await sbPost('stock_in_details', {
+            DetailID: detailID, StockInID: stockInID, ProductID: item.ProductID, Qty: item.Qty
+          });
+        }
+        siPendingItems = [];
+        renderSiPendingItems();
         // NO stock balance change here!
         showToast(t('stockinSuccess'), 'ok');
       } catch (e) {
@@ -1506,6 +1520,8 @@ function applyPermissions() {
     }
 
     // 重置
+    siPendingItems = [];
+    renderSiPendingItems();
     document.getElementById('f-qty').value = '';
     document.getElementById('f-amount').value = '';
     document.getElementById('f-editing-siid').value = '';
@@ -1520,9 +1536,18 @@ function applyPermissions() {
   window.confirmStockIn = async function(stockInID) {
     if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
     try {
+      // 防重复：先检查当前状态
+      const si = await sbGetFiltered('stock_ins', 'StockInID', stockInID);
+      if (!si || si.length === 0) { showToast('进货单不存在', 'err'); return; }
+      if (si[0].Status !== 'pending') { showToast('此进货单已处理', 'err'); return; }
+
       const details = await sbGetFiltered('stock_in_details', 'StockInID', stockInID);
       if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
 
+      // 先改状态为 done（锁定，防止重复确认）
+      await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'done' });
+
+      // 再逐条加库存
       for (const d of details) {
         const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
         if (prod && prod.length > 0) {
@@ -1532,7 +1557,6 @@ function applyPermissions() {
         }
       }
 
-      await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'done' });
       showToast(t('confirmStockin') + ' ✅', 'ok');
       await loadAll();
     } catch (e) {
@@ -2147,12 +2171,24 @@ function applyPermissions() {
       orderDraftRows.push(makeOrderDraftRow());
       renderOrderEditorRows();
     });
+    document.getElementById('btn-si-add-item').addEventListener('click', function() {
+      const prodEl = document.getElementById('f-prod');
+      const qtyEl = document.getElementById('f-qty');
+      const productID = prodEl.value;
+      const productName = prodEl.options[prodEl.selectedIndex]?.text || productID;
+      const qty = parseInt(qtyEl.value);
+      if (!qty || qty < 1) { showToast('请输入数量', 'err'); return; }
+      siPendingItems.push({ ProductID: productID, productName, Qty: qty });
+      renderSiPendingItems();
+      qtyEl.value = '';
+      showToast(`已添加: ${productName} x${qty}`, 'ok');
+    });
 
-    // Modal 背景点击关闭；出货单禁止点背景关闭，避免进单时误触丢失草稿
+    // Modal 背景点击关闭；出货和进货单禁止点背景关闭
     document.querySelectorAll('.modal-bg').forEach(m => {
       m.addEventListener('click', function(e) {
         if (e.target !== this) return;
-        if (this.id === 'modal-order') return;
+        if (this.id === 'modal-order' || this.id === 'modal-si') return;
         closeModal();
       });
     });
