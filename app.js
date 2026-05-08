@@ -732,11 +732,14 @@ function applyPermissions() {
     return details.map(d => {
       const productName = escapeHTML(getProdName(d.ProductID));
       const unit = getProdUnit(d.ProductID);
+      const qty = Number(d.QTY || 0);
       const amount = Number(d.LineAmount || d.Amount || 0);
+      const uprice = Number(d.UnitPrice || d.Price || 0);
+      const pricePart = uprice ? ` <span class="price">@RM${uprice.toFixed(2)}</span>` : '';
       const money = amount ? `<em>RM ${amount.toFixed(2)}</em>` : '';
       return `<div class="order-detail-line">
-        <span>${productName}</span>
-        <strong>${Number(d.QTY || 0)} ${unit}${money}</strong>
+        <span>${productName}${pricePart}</span>
+        <strong>${qty} ${unit}${money}</strong>
       </div>`;
     }).join('');
   }
