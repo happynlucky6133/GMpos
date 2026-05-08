@@ -701,6 +701,14 @@ function applyPermissions() {
     return String(str).replace(/[&<>"']/g, m => ({ '&':'&','<':'<','>':'>','"':'"',"'":'&#39;'})[m]);
   }
 
+  function todayLocal() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   function getProdName(id) { return prodNameCache.get(id) || id; }
   function getSupName(id)  { return supNameCache.get(id) || id; }
   function getProd(id)     { return state.products.get(id); }
@@ -1188,18 +1196,25 @@ function applyPermissions() {
     const q = (document.getElementById('stockin-search').value || '').toLowerCase();
     const container = document.getElementById('stockin-list');
 
-    // 日期筛选
+    // 日期筛选：有搜索词时忽略日期，跨全部搜索
     const dateInput = document.getElementById('stockin-date');
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayLocal();
     if (!dateInput.value) dateInput.value = today;
     const filterDate = dateInput.value;
 
     const list = state.stockIns.filter(s => {
+      if (q) {
+        // 有搜索词：跨全部记录，支持模糊匹配（去掉前缀）
+        const searchText = s.StockInID.toLowerCase();
+        const searchDigits = searchText.replace(/[^0-9]/g, '');
+        const qDigits = q.replace(/[^0-9]/g, '');
+        const matchesID = searchText.includes(q) || (qDigits && searchDigits.includes(qDigits));
+        const matchesSup = getSupName(s.SupplierID).toLowerCase().includes(q);
+        return matchesID || matchesSup;
+      }
+      // 无搜索词：按日期筛选
       const sDate = String(s.Date).slice(0,10);
-      if (sDate !== filterDate) return false;
-      if (q && !s.StockInID.toLowerCase().includes(q) &&
-          !getSupName(s.SupplierID).toLowerCase().includes(q)) return false;
-      return true;
+      return sDate === filterDate;
     });
     if (list.length === 0) {
       container.innerHTML = '<div class="empty">' + t('noStockin') + '</div>';
@@ -1240,17 +1255,24 @@ function applyPermissions() {
     const q = (document.getElementById('order-search').value || '').toLowerCase();
     const container = document.getElementById('orders-list');
 
-    // 日期筛选
+    // 日期筛选：有搜索词时忽略日期，跨全部搜索
     const dateInput = document.getElementById('order-date');
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayLocal();
     if (!dateInput.value) dateInput.value = today;
     const filterDate = dateInput.value;
 
     const list = state.orders.filter(o => {
+      if (q) {
+        // 有搜索词：跨全部记录，支持模糊匹配（去掉前缀）
+        const searchText = o.POID.toLowerCase();
+        const searchDigits = searchText.replace(/[^0-9]/g, '');
+        const qDigits = q.replace(/[^0-9]/g, '');
+        if (searchText.includes(q) || (qDigits && searchDigits.includes(qDigits))) return true;
+        return orderMatchesSearch(o, q);
+      }
+      // 无搜索词：按日期筛选
       const oDate = String(o.Date).slice(0,10);
-      if (oDate !== filterDate) return false;
-      if (!q) return true;
-      return orderMatchesSearch(o, q);
+      return oDate === filterDate;
     });
     if (list.length === 0) {
       container.innerHTML = '<div class="empty">' + t('noOrders') + '</div>';
@@ -1295,7 +1317,7 @@ function applyPermissions() {
   function initReportPage() {
     const dateInput = document.getElementById('report-date');
     // 默认今天
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayLocal();
     dateInput.value = today;
     queryReport(today);
 
@@ -1541,10 +1563,16 @@ function applyPermissions() {
       btn.disabled = true;
       btn.textContent = t('submitting');
       try {
-        // 保存供应商和总金额
+        // 计算自动总金额（从明细行算出）
+        let autoTotal = 0;
+        document.querySelectorAll('#si-edit-rows .si-edit-row').forEach(row => {
+          const q = parseInt(row.querySelector('.si-edit-qty').value);
+          const p = parseFloat(row.querySelector('.si-edit-price')?.value) || 0;
+          if (q > 0) autoTotal += q * p;
+        });
         await sbPatch('stock_ins', 'StockInID', editingSIID, {
           SupplierID: document.getElementById('f-sup').value,
-          TotalAmount: parseFloat(document.getElementById('f-amount').value) || 0
+          TotalAmount: autoTotal || parseFloat(document.getElementById('f-amount').value) || 0
         });
         // 收集所有还留在画面上的 detailId
         const keptDetailIds = new Set();
@@ -1553,11 +1581,16 @@ function applyPermissions() {
           const detailId = row.dataset.detailid;
           const prodEl = row.querySelector('.si-edit-prod');
           const qtyEl = row.querySelector('.si-edit-qty');
+          const priceEl = row.querySelector('.si-edit-price');
           const productID = prodEl.value;
           const qty = parseInt(qtyEl.value);
+          const unitPrice = parseFloat(priceEl?.value) || 0;
           if (!qty || qty < 1) continue;
           keptDetailIds.add(detailId);
-          await sbPatch('stock_in_details', 'DetailID', detailId, { ProductID: productID, Qty: qty });
+          await sbPatch('stock_in_details', 'DetailID', detailId, {
+            ProductID: productID, Qty: qty,
+            UnitPrice: unitPrice, LineAmount: qty * unitPrice
+          });
         }
         // 删除数据库中不在画面上的明细
         const allDetails = getStockInDetails(editingSIID) || [];
@@ -1581,16 +1614,21 @@ function applyPermissions() {
       btn.textContent = t('submitting');
       try {
         const now = new Date();
-        const dateStr = now.toISOString().slice(0,10);
+        const dateStr = todayLocal();
         const timeStr = now.toTimeString().slice(0,8);
         const uid = Math.random().toString(36).slice(2, 6);
         const stockInID = `S01-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
         const supplierID = document.getElementById('f-sup').value;
 
+        const totalAmount = siPendingItems.reduce((sum, item) => {
+          const price = Number(item.UnitPrice || 0);
+          return sum + (price ? item.Qty * price : 0);
+        }, 0);
+
         await sbPost('stock_ins', {
           StockInID: stockInID, Date: dateStr, Time: timeStr,
           SupplierID: supplierID, Status: 'pending',
-          TotalAmount: parseFloat(document.getElementById('f-amount').value) || 0
+          TotalAmount: totalAmount || parseFloat(document.getElementById('f-amount').value) || 0
         });
         for (const item of siPendingItems) {
           const detailID = Math.random().toString(36).slice(2, 10);
@@ -1630,41 +1668,44 @@ function applyPermissions() {
   window.confirmStockIn = async function(stockInID) {
     if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
     try {
-      // 防重复确认：用条件更新 Status=pending 做原子锁定
-      // 只有当前 Status=pending 时才改为 done，避免双击/并发重复确认
-      const lockUrl = SB + '/stock_ins?StockInID=eq.' + encodeURIComponent(stockInID) + '&Status=eq.pending';
+      // 防重复确认：条件更新 Status=pending → done，用 return=representation 判断是否锁到
+      const lockUrl = SB + '/stock_ins?StockInID=eq.' + encodeURIComponent(stockInID) + '&Status=eq.pending&select=StockInID';
       const lockRes = await fetch(lockUrl, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_KEY,
           'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Prefer': 'return=minimal'
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({ Status: 'done' })
       });
-      if (!lockRes.ok) {
-        const errText = await lockRes.text();
-        // 如果没匹配到记录（已不是 pending），说明被其他人确认了
-        if (lockRes.status === 404 || errText.includes('No rows')) {
-          showToast('此进货单已被处理', 'err');
-        } else {
-          throw new Error(errText);
-        }
+      if (!lockRes.ok) throw new Error(await lockRes.text());
+      const locked = await lockRes.json();
+      // 如果返回空数组，说明没有 pending 记录被更新 → 已被处理
+      if (!locked || locked.length === 0) {
+        showToast('此进货单已被处理', 'err');
         return;
       }
 
       const details = await sbGetFiltered('stock_in_details', 'StockInID', stockInID);
       if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
 
-      // 再逐条加库存
-      for (const d of details) {
-        const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
-        if (prod && prod.length > 0) {
-          const currentStock = Number(prod[0].StockBalance) || 0;
-          const newBalance = currentStock + Number(d.Qty || 0);
-          await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
+      // 先逐条加库存，再加完才确定 done（已锁定状态不会重复执行）
+      try {
+        for (const d of details) {
+          const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
+          if (prod && prod.length > 0) {
+            const currentStock = Number(prod[0].StockBalance) || 0;
+            const newBalance = currentStock + Number(d.Qty || 0);
+            await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
+          }
         }
+      } catch (stockErr) {
+        // 库存更新失败 → 回滚状态到 pending 方便重试
+        showToast('库存更新失败，已回滚单据状态: ' + stockErr.message, 'err');
+        await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'pending' }).catch(() => {});
+        return;
       }
 
       showToast(t('confirmStockin') + ' ✅', 'ok');
@@ -1700,20 +1741,37 @@ function applyPermissions() {
       const opts = Array.from(state.products.values()).map(p =>
         `<option value="${p.ProductID}" ${p.ProductID === d.ProductID ? 'selected' : ''}>${escapeHTML(p.ProductName)} (${p.Grade || ''})</option>`
       ).join('');
-      return `<div class="form-group si-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:8px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">
-        <div style="flex:1">
-          <label class="form-label" style="font-size:11px">产品</label>
-          <select class="si-edit-prod">${opts}</select>
-        </div>
-        <div style="width:100px">
-          <label class="form-label" style="font-size:11px">数量</label>
-          <input type="number" class="si-edit-qty" value="${d.Qty}" min="1" inputmode="numeric" style="width:100%">
-        </div>
-        <button class="del-btn" onclick="this.closest('.si-edit-row').remove()" style="margin-bottom:4px">✕</button>
-      </div>`;
+      const uprice = Number(d.UnitPrice || 0);
+      const lineAmt = uprice ? Number(d.Qty) * uprice : 0;
+      return `<div class="form-group si-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:6px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">\n        <div style="flex:1;min-width:100px">\n          <label class="form-label" style="font-size:11px">产品</label>\n          <select class="si-edit-prod">${opts}</select>\n        </div>\n        <div style="width:70px">\n          <label class="form-label" style="font-size:11px">数量</label>\n          <input type="number" class="si-edit-qty" value="${d.Qty}" min="1" inputmode="numeric" style="width:100%">\n        </div>\n        <div style="width:90px">\n          <label class="form-label" style="font-size:11px">单价 (RM)</label>\n          <input type="number" class="si-edit-price" value="${uprice.toFixed(2)}" min="0" step="0.01" inputmode="decimal" style="width:100%">\n        </div>\n        <div style="width:70px">\n          <label class="form-label" style="font-size:11px">小计</label>\n          <div class="order-line-total" style="min-height:43px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:14px;font-weight:700">RM ${lineAmt.toFixed(2)}</div>\n        </div>\n        <button class="del-btn" onclick="this.closest('.si-edit-row').remove();siRecalcTotal()" style="margin-bottom:4px">✕</button>\n      </div>`;
     }).join('');
 
+    // 给编辑行的单价添加自动重算事件
+    container.querySelectorAll('.si-edit-qty, .si-edit-price').forEach(el => {
+      el.addEventListener('input', function() {
+        const row = this.closest('.si-edit-row');
+        const qty = parseFloat(row.querySelector('.si-edit-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.si-edit-price').value) || 0;
+        const lineTotal = row.querySelector('.order-line-total');
+        if (lineTotal) lineTotal.textContent = 'RM ' + (qty * price).toFixed(2);
+        siRecalcTotal();
+      });
+    });
+    // 计算所有行小计加总作为总金额
+    siRecalcTotal();
+
+    function siRecalcTotal() {
+      let total = 0;
+      document.querySelectorAll('#si-edit-rows .si-edit-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.si-edit-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.si-edit-price').value) || 0;
+        total += qty * price;
+      });
+      document.getElementById('f-amount').value = total.toFixed(2);
+    }
+
     document.getElementById('f-amount').value = si.TotalAmount || '';
+    document.getElementById('f-amount').readOnly = false;
     const title = document.querySelector('#modal-si .modal-title');
     if (title) title.textContent = '编辑进货单';
     document.getElementById('btn-si').textContent = '保存更改';
@@ -1840,7 +1898,7 @@ function applyPermissions() {
     btn.textContent = t('ordering');
     try {
       const now = new Date();
-      const dateStr = now.toISOString().slice(0,10);
+        const dateStr = todayLocal();
       const timeStr = now.toTimeString().slice(0,8);
       const uid = Math.random().toString(36).slice(2, 6);
       const requestedPOID = document.getElementById('o-poid').value.trim();
@@ -1906,25 +1964,22 @@ function applyPermissions() {
   window.confirmOrder = async function(poID) {
     if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
     try {
-      // 防重复确认：用条件更新 Status=pending 做原子锁定
-      const lockUrl = SB + '/purchase_orders?POID=eq.' + encodeURIComponent(poID) + '&Status=eq.pending';
+      // 防重复确认：条件更新 Status=pending → done，用 return=representation 判断是否锁到
+      const lockUrl = SB + '/purchase_orders?POID=eq.' + encodeURIComponent(poID) + '&Status=eq.pending&select=POID';
       const lockRes = await fetch(lockUrl, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_KEY,
           'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Prefer': 'return=minimal'
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({ Status: 'done' })
       });
-      if (!lockRes.ok) {
-        const errText = await lockRes.text();
-        if (lockRes.status === 404 || errText.includes('No rows')) {
-          showToast('此订单已被处理', 'err');
-        } else {
-          throw new Error(errText);
-        }
+      if (!lockRes.ok) throw new Error(await lockRes.text());
+      const locked = await lockRes.json();
+      if (!locked || locked.length === 0) {
+        showToast('此订单已被处理', 'err');
         return;
       }
 
@@ -1932,14 +1987,21 @@ function applyPermissions() {
       const details = await sbGetFiltered('po_details', 'POID', poID);
       if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
 
-      // 逐条扣库存 — 从数据库拉最新库存
-      for (const d of details) {
-        const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
-        if (prod && prod.length > 0) {
-          const currentStock = Number(prod[0].StockBalance) || 0;
-          const newBalance = currentStock - d.QTY;
-          await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
+      // 先扣库存，全部成功后再确认 done（已锁定不会重复执行）
+      try {
+        for (const d of details) {
+          const prod = await sbGetFiltered('products', 'ProductID', d.ProductID);
+          if (prod && prod.length > 0) {
+            const currentStock = Number(prod[0].StockBalance) || 0;
+            const newBalance = currentStock - d.QTY;
+            await sbPatch('products', 'ProductID', d.ProductID, { StockBalance: newBalance });
+          }
         }
+      } catch (stockErr) {
+        // 库存更新失败 → 回滚状态到 pending 方便重试
+        showToast('库存更新失败，已回滚单据状态: ' + stockErr.message, 'err');
+        await sbPatch('purchase_orders', 'POID', poID, { Status: 'pending' }).catch(() => {});
+        return;
       }
 
       showToast(t('orderConfirm') + ' ✅', 'ok');
