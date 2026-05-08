@@ -34,6 +34,7 @@
       recentStockin: '最近进货',
       noProducts: '暂无产品',
       noStockin: '暂无进货记录',
+      noItems: '暂无产品',
       grade: '等级',
       unit_pcs: '件',
       search: '搜索',
@@ -55,6 +56,7 @@
       supplier: '供应商',
       product: '产品',
       searchDO: '搜索 DO 号码...',
+      searchAllDates: '正在跨全部日期搜索：',
       noPermission: '无权操作',
       submitFail: '提交失败: ',
       // 出货
@@ -87,6 +89,41 @@
       adding: '添加中...',
       productAdded: '产品已添加！',
       productName: '产品名称',
+      productList: '产品列表',
+      editProduct: '编辑产品',
+      saveChanges: '保存更改',
+      stockQty: '库存数量',
+      mergeSku: '合并 SKU',
+      mergeSkuDesc: '将旧 SKU 的产品、历史记录和库存合并到目标 SKU，然后删除旧 SKU。此操作不可撤销！',
+      oldSku: '旧 SKU (要合并掉的)',
+      targetSku: '目标 SKU (合并到它)',
+      confirmMerge: '确认合并',
+      sameSku: '不能将同一个 SKU 合并到自己',
+      mergedHistoryNotice: '历史进货/出货记录将转移到目标 SKU',
+      mergedStock: '合并后库存',
+      noAccessAction: '你没有权限执行此操作',
+      cancelOrderDraft: '确定取消这张出货单？已输入的内容会清空。',
+      cancelEditDraft: '确定取消编辑？更改不会保存。',
+      cancelStockDraft: '确定取消？已添加的产品清单将清空。',
+      stockInProcessed: '此进货单已被处理',
+      productNotFoundPrefix: '产品不存在: ',
+      cancelStockInConfirm: '确定取消此进货单？',
+      deleteStockInConfirm: '确定删除此进货单？不可恢复。',
+      orderNoDetails: '订单无明细',
+      cancelOrderConfirm: '确定取消此订单？',
+      deleteDoneOrderConfirm: '此订单已确认完成！\n确定删除 {id}？\n（库存将不会自动恢复，请手动调整）',
+      deleteOrderConfirm: '确定删除此订单 {id}？不可恢复。',
+      mergeConfirm: '高风险操作！\n\n将合并以下 SKU：\n\n旧 SKU: {fromName} ({fromID})\n  库存: {fromStock}\n\n目标 SKU: {toName} ({toID})\n  当前库存: {toStock}\n  合并后: {mergedStock}\n\n所有进货/出货记录中的 ProductID 将改为目标 SKU。\n\n确定继续？',
+      mergedPrefix: '已合并: ',
+      enterQty: '请输入数量',
+      stockInNoDetails: '进货单无明细',
+      stockInNotFound: '进货单不存在',
+      orderProcessed: '此订单已被处理',
+      orderNotFound: '订单不存在',
+      skuNotFoundPrefix: 'SKU 不存在: ',
+      enterProductName: '请输入产品名称',
+      enterSupplierName: '请输入供应商名称',
+      productUpdated: '产品已更新',
       // 供应商
       newSupplier: '新增供应商',
       addSupplier: '添加供应商',
@@ -158,6 +195,7 @@
       recentStockin: 'Terbaru Masuk',
       noProducts: 'Belum ada produk',
       noStockin: 'Belum ada catatan masuk',
+      noItems: 'Belum ada produk',
       grade: 'Grade',
       unit_pcs: 'item',
       search: 'Cari',
@@ -178,6 +216,7 @@
       supplier: 'Pemasok',
       product: 'Produk',
       searchDO: 'Cari DO...',
+      searchAllDates: 'Mencari semua tanggal: ',
       noPermission: 'Tidak ada akses',
       submitFail: 'Gagal kirim: ',
       newOrder: 'Stok Keluar',
@@ -208,6 +247,41 @@
       adding: 'Menambah...',
       productAdded: 'Produk ditambahkan!',
       productName: 'Nama Produk',
+      productList: 'Daftar Produk',
+      editProduct: 'Edit Produk',
+      saveChanges: 'Simpan Perubahan',
+      stockQty: 'Jumlah Stok',
+      mergeSku: 'Gabung SKU',
+      mergeSkuDesc: 'Gabungkan produk, riwayat, dan stok SKU lama ke SKU tujuan, lalu hapus SKU lama. Tindakan ini tidak dapat dibatalkan!',
+      oldSku: 'SKU Lama (akan digabung)',
+      targetSku: 'SKU Tujuan',
+      confirmMerge: 'Konfirmasi Gabung',
+      sameSku: 'Tidak bisa menggabungkan SKU yang sama',
+      mergedHistoryNotice: 'Riwayat stok masuk/keluar akan dipindahkan ke SKU tujuan',
+      mergedStock: 'Stok Setelah Digabung',
+      noAccessAction: 'Anda tidak punya akses untuk tindakan ini',
+      cancelOrderDraft: 'Batalkan stok keluar ini? Data yang sudah diisi akan kosong.',
+      cancelEditDraft: 'Batalkan edit? Perubahan tidak akan disimpan.',
+      cancelStockDraft: 'Batalkan? Daftar produk yang sudah ditambahkan akan kosong.',
+      stockInProcessed: 'Stok masuk ini sudah diproses',
+      productNotFoundPrefix: 'Produk tidak ditemukan: ',
+      cancelStockInConfirm: 'Yakin batalkan stok masuk ini?',
+      deleteStockInConfirm: 'Yakin hapus stok masuk ini? Tidak bisa dikembalikan.',
+      orderNoDetails: 'Order tidak memiliki detail',
+      cancelOrderConfirm: 'Yakin batalkan order ini?',
+      deleteDoneOrderConfirm: 'Order ini sudah selesai!\nYakin hapus {id}?\n(Stok tidak akan dikembalikan otomatis, perlu ubah manual)',
+      deleteOrderConfirm: 'Yakin hapus order {id}? Tidak bisa dikembalikan.',
+      mergeConfirm: 'Operasi berisiko tinggi!\n\nSKU berikut akan digabung:\n\nSKU lama: {fromName} ({fromID})\n  Stok: {fromStock}\n\nSKU tujuan: {toName} ({toID})\n  Stok saat ini: {toStock}\n  Setelah digabung: {mergedStock}\n\nSemua riwayat stok masuk/keluar akan dipindahkan ke SKU tujuan.\n\nLanjutkan?',
+      mergedPrefix: 'Berhasil digabung: ',
+      enterQty: 'Masukkan jumlah',
+      stockInNoDetails: 'Stok masuk tidak memiliki detail',
+      stockInNotFound: 'Stok masuk tidak ditemukan',
+      orderProcessed: 'Order ini sudah diproses',
+      orderNotFound: 'Order tidak ditemukan',
+      skuNotFoundPrefix: 'SKU tidak ditemukan: ',
+      enterProductName: 'Masukkan nama produk',
+      enterSupplierName: 'Masukkan nama pemasok',
+      productUpdated: 'Produk diperbarui',
       newSupplier: 'Tambah Pemasok',
       addSupplier: 'Tambah Pemasok',
       supplierAdded: 'Pemasok ditambahkan!',
@@ -274,6 +348,7 @@
       recentStockin: 'Recent Stock In',
       noProducts: 'No products',
       noStockin: 'No stock in records',
+      noItems: 'No products',
       grade: 'Grade',
       unit_pcs: 'item',
       search: 'Search',
@@ -294,6 +369,7 @@
       supplier: 'Supplier',
       product: 'Product',
       searchDO: 'Search DO number...',
+      searchAllDates: 'Searching all dates: ',
       noPermission: 'No permission',
       submitFail: 'Submit failed: ',
       newOrder: 'New Order',
@@ -324,6 +400,41 @@
       adding: 'Adding...',
       productAdded: 'Product added!',
       productName: 'Product Name',
+      productList: 'Product List',
+      editProduct: 'Edit Product',
+      saveChanges: 'Save Changes',
+      stockQty: 'Stock Qty',
+      mergeSku: 'Merge SKU',
+      mergeSkuDesc: 'Merge the old SKU product, history, and stock into the target SKU, then delete the old SKU. This cannot be undone!',
+      oldSku: 'Old SKU (to merge away)',
+      targetSku: 'Target SKU',
+      confirmMerge: 'Confirm Merge',
+      sameSku: 'Cannot merge the same SKU into itself',
+      mergedHistoryNotice: 'Stock in/out history will be moved to the target SKU',
+      mergedStock: 'Merged Stock',
+      noAccessAction: 'You do not have permission for this action',
+      cancelOrderDraft: 'Cancel this stock out order? Entered data will be cleared.',
+      cancelEditDraft: 'Cancel editing? Changes will not be saved.',
+      cancelStockDraft: 'Cancel? Added product rows will be cleared.',
+      stockInProcessed: 'This stock in has already been processed',
+      productNotFoundPrefix: 'Product not found: ',
+      cancelStockInConfirm: 'Cancel this stock in?',
+      deleteStockInConfirm: 'Delete this stock in? This cannot be undone.',
+      orderNoDetails: 'Order has no details',
+      cancelOrderConfirm: 'Cancel this order?',
+      deleteDoneOrderConfirm: 'This order is already done!\nDelete {id}?\n(Stock will not be restored automatically; adjust manually)',
+      deleteOrderConfirm: 'Delete this order {id}? This cannot be undone.',
+      mergeConfirm: 'High-risk action!\n\nThe following SKU will be merged:\n\nOld SKU: {fromName} ({fromID})\n  Stock: {fromStock}\n\nTarget SKU: {toName} ({toID})\n  Current stock: {toStock}\n  Merged stock: {mergedStock}\n\nAll stock in/out history will be moved to the target SKU.\n\nContinue?',
+      mergedPrefix: 'Merged: ',
+      enterQty: 'Enter quantity',
+      stockInNoDetails: 'Stock in has no details',
+      stockInNotFound: 'Stock in not found',
+      orderProcessed: 'This order has already been processed',
+      orderNotFound: 'Order not found',
+      skuNotFoundPrefix: 'SKU not found: ',
+      enterProductName: 'Enter product name',
+      enterSupplierName: 'Enter supplier name',
+      productUpdated: 'Product updated',
       newSupplier: 'New Supplier',
       addSupplier: 'Add Supplier',
       supplierAdded: 'Supplier added!',
@@ -369,6 +480,9 @@
 
   let currentLang = localStorage.getItem('gmpos_lang') || 'zh';
   function t(key) { return (LANG[currentLang] || LANG.zh)[key] || key; }
+  function tf(key, vars = {}) {
+    return t(key).replace(/\{(\w+)\}/g, (_, name) => vars[name] == null ? '' : String(vars[name]));
+  }
 
   // ============================================================
   // Supabase 配置
@@ -604,6 +718,7 @@ function applyPermissions() {
       document.getElementById('app-main').style.display = 'flex';
 
       applyPermissions();
+      applyLang();
       showToast(t('welcome') + currentUser.DisplayName + '！', 'ok');
       loadAll();
     } catch (e) {
@@ -774,7 +889,7 @@ function applyPermissions() {
     const container = document.getElementById('si-pending-items');
     if (!container) return;
     if (siPendingItems.length === 0) {
-      container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0">暂无产品</div>';
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0">' + t('noItems') + '</div>';
       return;
     }
     container.innerHTML = siPendingItems.map((item, i) => {
@@ -1158,7 +1273,7 @@ function applyPermissions() {
             <div class="stock-num">${Number(p.StockBalance || 0)}</div>
             <div class="stock-unit">${p.Unit || 'kg'}</div>
           </div>
-          ${isAdmin() ? `<button class="edit-btn" data-type="product" data-id="${p.ProductID}" style="background:var(--blue-light);color:var(--blue);border:none;width:28px;height:28px;border-radius:8px;font-size:14px;cursor:pointer" title="编辑产品">✎</button>` : ''}
+          ${isAdmin() ? `<button class="edit-btn" data-type="product" data-id="${p.ProductID}" style="background:var(--blue-light);color:var(--blue);border:none;width:28px;height:28px;border-radius:8px;font-size:14px;cursor:pointer" title="${t('editProduct')}">✎</button>` : ''}
           ${isAdmin() ? `<button class="del-btn" data-type="product" data-id="${p.ProductID}">✕</button>` : ''}
         </div>
       </div>`
@@ -1173,7 +1288,7 @@ function applyPermissions() {
     if (sectionTitle && isAdmin() && !document.getElementById('btn-merge-sku-header')) {
       const mergeBtn = document.createElement('button');
       mergeBtn.id = 'btn-merge-sku-header';
-      mergeBtn.textContent = '🔀 合并 SKU';
+      mergeBtn.textContent = '🔀 ' + t('mergeSku');
       mergeBtn.style.cssText = 'float:right;font-size:11px;background:var(--red-light);color:var(--red);border:1px solid var(--border);border-radius:8px;padding:2px 8px;cursor:pointer;font-weight:500';
       mergeBtn.onclick = window.openMergeSku;
       sectionTitle.appendChild(mergeBtn);
@@ -1233,7 +1348,7 @@ function applyPermissions() {
       const sDate = String(s.Date).slice(0,10);
       return sDate === filterDate;
     });
-    const searchNotice = q ? `<div class="empty" style="padding:8px 10px;margin-bottom:8px;text-align:left">正在跨全部日期搜索：${escapeHTML(q)}</div>` : '';
+    const searchNotice = q ? `<div class="empty" style="padding:8px 10px;margin-bottom:8px;text-align:left">${t('searchAllDates')}${escapeHTML(q)}</div>` : '';
     if (list.length === 0) {
       container.innerHTML = searchNotice + '<div class="empty">' + t('noStockin') + '</div>';
       return;
@@ -1244,7 +1359,7 @@ function applyPermissions() {
       let statusBadge = '';
       let actions = '';
       if (status === 'pending') {
-        statusBadge = '<span class="badge badge-pending">等待确认</span>';
+        statusBadge = '<span class="badge badge-pending">' + t('orderPending') + '</span>';
         actions += `<button class="btn-sm btn-ok" onclick="window.confirmStockIn('${s.StockInID}')">${t('confirmStockin')}</button>`;
         actions += `<button class="btn-sm btn-edit" onclick="window.editStockIn('${s.StockInID}')">${t('orderEdit')}</button>`;
         if (isAdmin()) {
@@ -1294,7 +1409,7 @@ function applyPermissions() {
       const oDate = String(o.Date).slice(0,10);
       return oDate === filterDate;
     });
-    const searchNotice = q ? `<div class="empty" style="padding:8px 10px;margin-bottom:8px;text-align:left">正在跨全部日期搜索：${escapeHTML(q)}</div>` : '';
+    const searchNotice = q ? `<div class="empty" style="padding:8px 10px;margin-bottom:8px;text-align:left">${t('searchAllDates')}${escapeHTML(q)}</div>` : '';
     if (list.length === 0) {
       container.innerHTML = searchNotice + '<div class="empty">' + t('noOrders') + '</div>';
       return;
@@ -1513,7 +1628,7 @@ function applyPermissions() {
     if (!modalId) return;
     // 权限检查
     if (!canUseModal(modalId)) {
-      showToast('你没有权限执行此操作', 'err');
+      showToast(t('noAccessAction'), 'err');
       return;
     }
     state.currentModal = modalId;
@@ -1541,7 +1656,7 @@ function applyPermissions() {
     }
     if (wasStockInEdit) {
       const title = document.querySelector('#modal-si .modal-title');
-      if (title) title.textContent = '新增进货';
+      if (title) title.textContent = t('newStockin');
       document.getElementById('btn-si').textContent = t('confirmStockin');
       document.getElementById('f-editing-siid').value = '';
       document.getElementById('si-edit-rows').innerHTML = '';
@@ -1558,14 +1673,14 @@ function applyPermissions() {
 
   function requestCloseModal() {
     if (state.currentModal === 'modal-order' && hasOrderDraftData()) {
-      if (!confirm('确定取消这张出货单？已输入的内容会清空。')) return;
+      if (!confirm(t('cancelOrderDraft'))) return;
     }
     if (state.currentModal === 'modal-si') {
       const editingSIID = document.getElementById('f-editing-siid').value;
       if (editingSIID && document.querySelectorAll('#si-edit-rows .si-edit-row').length > 0) {
-        if (!confirm('确定取消编辑？更改不会保存。')) return;
+        if (!confirm(t('cancelEditDraft'))) return;
       } else if (siPendingItems.length > 0) {
-        if (!confirm('确定取消？已添加的产品清单将清空。')) return;
+        if (!confirm(t('cancelStockDraft'))) return;
       }
     }
     closeModal();
@@ -1693,13 +1808,13 @@ function applyPermissions() {
       if (result.ok) {
         showToast(t('confirmStockin') + ' ✅', 'ok');
       } else if (result.status === 'already_processed') {
-        showToast('此进货单已被处理', 'err');
+        showToast(t('stockInProcessed'), 'err');
       } else if (result.status === 'no_details') {
-        showToast('进货单无明细', 'err');
+        showToast(t('stockInNoDetails'), 'err');
       } else if (result.status === 'not_found') {
-        showToast('进货单不存在', 'err');
+        showToast(t('stockInNotFound'), 'err');
       } else if (result.status === 'invalid_product') {
-        showToast('产品不存在: ' + (result.message || ''), 'err');
+        showToast(t('productNotFoundPrefix') + (result.message || ''), 'err');
       } else {
         showToast(t('submitFail') + (result.message || result.status), 'err');
       }
@@ -1711,7 +1826,7 @@ function applyPermissions() {
 
   window.cancelStockIn = async function(stockInID) {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
-    if (!confirm('确定取消此进货单？')) return;
+    if (!confirm(t('cancelStockInConfirm'))) return;
     try {
       await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'cancelled' });
       showToast(t('orderCancel') + ' ✅', 'ok');
@@ -1723,9 +1838,9 @@ function applyPermissions() {
 
   window.editStockIn = function(stockInID) {
     const si = state.stockIns.find(s => s.StockInID === stockInID);
-    if (!si) { showToast('进货单不存在', 'err'); return; }
+    if (!si) { showToast(t('stockInNotFound'), 'err'); return; }
     const details = getStockInDetails(stockInID);
-    if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
+    if (!details || details.length === 0) { showToast(t('stockInNoDetails'), 'err'); return; }
 
     document.getElementById('si-new-row-area').style.display = 'none';
     document.getElementById('f-editing-siid').value = stockInID;
@@ -1739,19 +1854,19 @@ function applyPermissions() {
       const lineAmt = uprice ? Number(d.Qty) * uprice : 0;
       return `<div class="form-group si-edit-row" data-detailid="${d.DetailID}" style="display:flex;gap:6px;align-items:end;padding:8px 0;border-top:1px solid var(--border)">
         <div style="flex:1;min-width:100px">
-          <label class="form-label" style="font-size:11px">产品</label>
+          <label class="form-label" style="font-size:11px">${t('product')}</label>
           <select class="si-edit-prod">${opts}</select>
         </div>
         <div style="width:70px">
-          <label class="form-label" style="font-size:11px">数量</label>
+          <label class="form-label" style="font-size:11px">${t('qty')}</label>
           <input type="number" class="si-edit-qty" value="${d.Qty}" min="1" inputmode="numeric" style="width:100%">
         </div>
         <div style="width:90px">
-          <label class="form-label" style="font-size:11px">单价 (RM)</label>
+          <label class="form-label" style="font-size:11px">${t('unitPrice')} (RM)</label>
           <input type="number" class="si-edit-price" value="${uprice.toFixed(2)}" min="0" step="0.01" inputmode="decimal" style="width:100%">
         </div>
         <div style="width:70px">
-          <label class="form-label" style="font-size:11px">小计</label>
+          <label class="form-label" style="font-size:11px">${t('lineTotal')}</label>
           <div class="order-line-total" style="min-height:43px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:14px;font-weight:700">RM ${lineAmt.toFixed(2)}</div>
         </div>
         <button class="del-btn si-edit-del" style="margin-bottom:4px">✕</button>
@@ -1790,8 +1905,8 @@ function applyPermissions() {
     // 用明细重算覆盖旧总金额
     siRecalcTotal();
     const title = document.querySelector('#modal-si .modal-title');
-    if (title) title.textContent = '编辑进货单';
-    document.getElementById('btn-si').textContent = '保存更改';
+    if (title) title.textContent = t('newStockin') + ' - ' + t('orderEdit');
+    document.getElementById('btn-si').textContent = t('saveChanges');
     document.getElementById('f-sup').value = si.SupplierID || '';
 
     document.getElementById('modal-si').classList.add('open');
@@ -1800,7 +1915,7 @@ function applyPermissions() {
 
   window.deleteStockIn = async function(stockInID) {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
-    if (!confirm('确定删除此进货单？不可恢复。')) return;
+    if (!confirm(t('deleteStockInConfirm'))) return;
     try {
       await sbDelete('stock_in_details', 'StockInID', stockInID);
       await sbDelete('stock_ins', 'StockInID', stockInID);
@@ -1874,7 +1989,7 @@ function applyPermissions() {
   async function submitSupplier() {
     if (!canUseModal('modal-supplier')) { showToast('无权操作', 'err'); return; }
     const name = document.getElementById('ns-name').value.trim();
-    if (!name) { showToast('请输入供应商名称', 'err'); return; }
+    if (!name) { showToast(t('enterSupplierName'), 'err'); return; }
     const btn = document.getElementById('btn-supplier');
     btn.disabled = true;
     btn.textContent = '添加中...';
@@ -1985,13 +2100,13 @@ function applyPermissions() {
       if (result.ok) {
         showToast(t('orderConfirm') + ' ✅', 'ok');
       } else if (result.status === 'already_processed') {
-        showToast('此订单已被处理', 'err');
+        showToast(t('orderProcessed'), 'err');
       } else if (result.status === 'no_details') {
-        showToast('订单无明细', 'err');
+        showToast(t('orderNoDetails'), 'err');
       } else if (result.status === 'not_found') {
-        showToast('订单不存在', 'err');
+        showToast(t('orderNotFound'), 'err');
       } else if (result.status === 'invalid_product') {
-        showToast('产品不存在: ' + (result.message || ''), 'err');
+        showToast(t('productNotFoundPrefix') + (result.message || ''), 'err');
       } else {
         showToast(t('submitFail') + (result.message || result.status), 'err');
       }
@@ -2003,7 +2118,7 @@ function applyPermissions() {
 
   window.cancelOrder = async function(poID) {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
-    if (!confirm('确定取消此订单？')) return;
+    if (!confirm(t('cancelOrderConfirm'))) return;
     try {
       await sbPatch('purchase_orders', 'POID', poID, { Status: 'cancelled' });
       showToast(t('orderCancel') + ' ✅', 'ok');
@@ -2015,9 +2130,9 @@ function applyPermissions() {
 
   window.editOrder = function(poID) {
     const order = state.orders.find(o => o.POID === poID);
-    if (!order) { showToast('订单不存在', 'err'); return; }
+    if (!order) { showToast(t('orderNotFound'), 'err'); return; }
     const details = getOrderDetails(poID);
-    if (!details.length) { showToast('订单无明细', 'err'); return; }
+    if (!details.length) { showToast(t('orderNoDetails'), 'err'); return; }
 
     // 预填 modal
     document.getElementById('o-poid').value = poID;
@@ -2043,8 +2158,8 @@ function applyPermissions() {
     const order = state.orders.find(o => o.POID === poID);
     const status = order ? order.Status : 'unknown';
     const msg = status === 'done'
-      ? `⚠️ 此订单已确认完成！\n确定删除 ${poID}？\n（库存将不会自动恢复，请手动调整）`
-      : `确定删除此订单 ${poID}？不可恢复。`;
+      ? '⚠️ ' + tf('deleteDoneOrderConfirm', { id: poID })
+      : tf('deleteOrderConfirm', { id: poID });
     if (!confirm(msg)) return;
     try {
       await sbDelete('po_details', 'POID', poID);
@@ -2065,7 +2180,7 @@ function applyPermissions() {
         if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
         const productID = this.dataset.id;
         const p = state.products.get(productID);
-        if (!p) { showToast('产品不存在', 'err'); return; }
+    if (!p) { showToast(t('productNotFoundPrefix'), 'err'); return; }
 
         document.getElementById('ep-id').value = productID;
         document.getElementById('ep-name').value = p.ProductName || '';
@@ -2083,7 +2198,7 @@ function applyPermissions() {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
     const productID = document.getElementById('ep-id').value;
     const name = document.getElementById('ep-name').value.trim();
-    if (!name) { showToast('请输入产品名称', 'err'); return; }
+    if (!name) { showToast(t('enterProductName'), 'err'); return; }
     const btn = document.getElementById('btn-edit-prod');
     btn.disabled = true;
     btn.textContent = t('submitting');
@@ -2094,14 +2209,14 @@ function applyPermissions() {
         Unit: document.getElementById('ep-unit').value,
         StockBalance: parseFloat(document.getElementById('ep-stock').value) || 0
       });
-      showToast('产品已更新', 'ok');
+      showToast(t('productUpdated'), 'ok');
       closeModal();
       await loadAll();
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '保存更改';
+    btn.textContent = t('saveChanges');
   }
 
   // ============================================================
@@ -2117,7 +2232,7 @@ function applyPermissions() {
     document.getElementById('ms-from').innerHTML = opts;
     document.getElementById('ms-to').innerHTML = opts;
 
-    document.getElementById('ms-preview').textContent = '请选择要合并的旧 SKU 和目标 SKU';
+        document.getElementById('ms-preview').textContent = t('oldSku') + ' / ' + t('targetSku');
     document.getElementById('btn-merge-sku').disabled = true;
 
     state.currentModal = 'modal-merge-sku';
@@ -2131,7 +2246,7 @@ function applyPermissions() {
     const btn = document.getElementById('btn-merge-sku');
     if (!fromID || !toID) { btn.disabled = true; return; }
     if (fromID === toID) {
-      document.getElementById('ms-preview').textContent = '⚠️ 不能将同一个 SKU 合并到自己';
+      document.getElementById('ms-preview').textContent = '⚠️ ' + t('sameSku');
       btn.disabled = true;
       return;
     }
@@ -2139,10 +2254,10 @@ function applyPermissions() {
     const to = state.products.get(toID);
     if (!from || !to) { btn.disabled = true; return; }
     document.getElementById('ms-preview').innerHTML =
-      `<strong>旧 SKU:</strong> ${escapeHTML(from.ProductName)} (${from.Grade || '-'}) · 库存 ${from.StockBalance}<br>` +
-      `<strong>目标 SKU:</strong> ${escapeHTML(to.ProductName)} (${to.Grade || '-'}) · 库存 ${to.StockBalance}<br>` +
-      `<strong>合并后库存:</strong> ${Number(from.StockBalance || 0) + Number(to.StockBalance || 0)}<br>` +
-      `<span style="color:var(--red)">⚠️ 历史进货/出货记录将转移到目标 SKU</span>`;
+      `<strong>${t('oldSku')}:</strong> ${escapeHTML(from.ProductName)} (${from.Grade || '-'}) · ${t('stockQty')} ${from.StockBalance}<br>` +
+      `<strong>${t('targetSku')}:</strong> ${escapeHTML(to.ProductName)} (${to.Grade || '-'}) · ${t('stockQty')} ${to.StockBalance}<br>` +
+      `<strong>${t('mergedStock')}:</strong> ${Number(from.StockBalance || 0) + Number(to.StockBalance || 0)}<br>` +
+      `<span style="color:var(--red)">⚠️ ${t('mergedHistoryNotice')}</span>`;
     btn.disabled = false;
   }
 
@@ -2151,12 +2266,20 @@ function applyPermissions() {
     const fromID = document.getElementById('ms-from').value;
     const toID = document.getElementById('ms-to').value;
     if (!fromID || !toID) return;
-    if (fromID === toID) { showToast('不能自己合并自己', 'err'); return; }
+    if (fromID === toID) { showToast(t('sameSku'), 'err'); return; }
 
     // 二次确认
     const from = state.products.get(fromID);
     const to = state.products.get(toID);
-    const msg = `⚠️ 高风险操作！\n\n将合并以下 SKU：\n\n旧 SKU: ${from.ProductName} (${fromID})\n  库存: ${from.StockBalance}\n\n目标 SKU: ${to.ProductName} (${toID})\n  当前库存: ${to.StockBalance}\n  合并后: ${Number(from.StockBalance||0) + Number(to.StockBalance||0)}\n\n所有进货/出货记录中的 ProductID 将改为目标 SKU。\n\n确定继续？`;
+    const msg = '⚠️ ' + tf('mergeConfirm', {
+      fromName: from.ProductName,
+      fromID,
+      fromStock: from.StockBalance,
+      toName: to.ProductName,
+      toID,
+      toStock: to.StockBalance,
+      mergedStock: Number(from.StockBalance||0) + Number(to.StockBalance||0)
+    });
     if (!confirm(msg)) return;
 
     const btn = document.getElementById('btn-merge-sku');
@@ -2167,12 +2290,12 @@ function applyPermissions() {
       const displayName = currentUser ? currentUser.DisplayName : '';
       const result = await sbRpc('merge_sku', { p_from_id: fromID, p_to_id: toID, p_user: displayName });
       if (result.ok) {
-        showToast(`已合并: ${from.ProductName} → ${to.ProductName}`, 'ok');
+        showToast(t('mergedPrefix') + `${from.ProductName} → ${to.ProductName}`, 'ok');
         closeModal();
       } else if (result.status === 'not_found') {
-        showToast('SKU 不存在: ' + (result.message || ''), 'err');
+        showToast(t('skuNotFoundPrefix') + (result.message || ''), 'err');
       } else if (result.status === 'same_sku') {
-        showToast('不能自己合并自己', 'err');
+        showToast(t('sameSku'), 'err');
       } else {
         showToast(t('submitFail') + (result.message || result.status), 'err');
       }
@@ -2181,7 +2304,7 @@ function applyPermissions() {
       showToast(t('submitFail') + e.message, 'err');
     }
     btn.disabled = false;
-    btn.textContent = '确认合并';
+    btn.textContent = t('confirmMerge');
   }
   function attachDeleteHandlers(container) {
     container.querySelectorAll('.del-btn').forEach(btn => {
@@ -2316,6 +2439,14 @@ function applyPermissions() {
     document.querySelectorAll('.stat-card .stat-label')[3].textContent = t('suppliers');
 
     // section titles
+    const productTitle = document.querySelector('#page-products .section-title');
+    if (productTitle) productTitle.textContent = t('productList');
+    const stockInTitle = document.querySelector('#page-stockin .section-title');
+    if (stockInTitle) stockInTitle.textContent = t('stockinRecords');
+    const ordersTitle = document.querySelector('#page-orders .section-title');
+    if (ordersTitle) ordersTitle.textContent = t('orders');
+    const suppliersTitle = document.querySelector('#page-suppliers .section-title');
+    if (suppliersTitle) suppliersTitle.textContent = t('suppliers');
     document.querySelectorAll('.section-title').forEach(el => {
       if (el.textContent === '库存概览' || el.textContent === 'Ringkasan Stok') el.textContent = t('stockOverview');
       if (el.textContent === '最近进货' || el.textContent === 'Terbaru Masuk') el.textContent = t('recentStockin');
@@ -2346,6 +2477,32 @@ function applyPermissions() {
     if (lblProdGrade) lblProdGrade.textContent = t('grade');
     const lblProdUnit = document.getElementById('lbl-prod-unit');
     if (lblProdUnit) lblProdUnit.textContent = t('unit_pcs');
+
+    // 编辑产品 modal
+    const editProdTitle = document.querySelector('#modal-edit-prod .modal-title');
+    if (editProdTitle) editProdTitle.textContent = t('editProduct');
+    const btnEditProd = document.getElementById('btn-edit-prod');
+    if (btnEditProd) btnEditProd.textContent = t('saveChanges');
+    const editProdCancel = document.querySelector('#modal-edit-prod .btn-cancel');
+    if (editProdCancel) editProdCancel.textContent = t('cancel');
+    const editProdLabels = document.querySelectorAll('#modal-edit-prod .form-label');
+    if (editProdLabels[0]) editProdLabels[0].textContent = t('productName');
+    if (editProdLabels[1]) editProdLabels[1].textContent = t('grade');
+    if (editProdLabels[2]) editProdLabels[2].textContent = t('unit_pcs');
+    if (editProdLabels[3]) editProdLabels[3].textContent = t('stockQty');
+
+    // 合并 SKU modal
+    const mergeTitle = document.querySelector('#modal-merge-sku .modal-title');
+    if (mergeTitle) mergeTitle.textContent = t('mergeSku');
+    const mergeDesc = document.querySelector('#modal-merge-sku p');
+    if (mergeDesc) mergeDesc.textContent = t('mergeSkuDesc');
+    const mergeLabels = document.querySelectorAll('#modal-merge-sku .form-label');
+    if (mergeLabels[0]) mergeLabels[0].textContent = t('oldSku');
+    if (mergeLabels[1]) mergeLabels[1].textContent = t('targetSku');
+    const btnMerge = document.getElementById('btn-merge-sku');
+    if (btnMerge) btnMerge.textContent = t('confirmMerge');
+    const mergeCancel = document.querySelector('#modal-merge-sku .btn-cancel');
+    if (mergeCancel) mergeCancel.textContent = t('cancel');
 
     // 供应商 modal
     const supTitle = document.querySelector('#modal-supplier .modal-title');
@@ -2494,7 +2651,7 @@ function applyPermissions() {
       const productID = prodEl.value;
       const productName = prodEl.options[prodEl.selectedIndex]?.text || productID;
       const qty = parseInt(qtyEl.value);
-      if (!qty || qty < 1) { showToast('请输入数量', 'err'); return; }
+      if (!qty || qty < 1) { showToast(t('enterQty'), 'err'); return; }
       const unitPrice = parseFloat(priceEl.value) || 0;
       siPendingItems.push({ ProductID: productID, productName, Qty: qty, UnitPrice: unitPrice });
       renderSiPendingItems();
