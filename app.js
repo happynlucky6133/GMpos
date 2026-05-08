@@ -396,6 +396,9 @@
   let supNameCache = new Map();
   let orderDraftRows = [];
   let poDetailsAmountColumnsReady = true;
+  let siPendingItems = [];
+  // 进货日期筛选
+  let stockInFilterDate = '';
 
   // ============================================================
   // 当前用户
@@ -744,15 +747,46 @@ function applyPermissions() {
     }).join('');
   }
 
+  function renderSiPendingItems() {
+    const container = document.getElementById('si-pending-items');
+    if (!container) return;
+    if (siPendingItems.length === 0) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0">暂无产品</div>';
+      return;
+    }
+    container.innerHTML = siPendingItems.map((item, i) => {
+      const priceStr = item.UnitPrice ? ` @RM${Number(item.UnitPrice).toFixed(2)}` : '';
+      const lineAmt = item.UnitPrice ? Number(item.UnitPrice) * item.Qty : 0;
+      const amtStr = lineAmt ? ` = RM${lineAmt.toFixed(2)}` : '';
+      return `<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
+        <span style="flex:1;font-size:13px">${escapeHTML(item.productName)}${priceStr}</span>
+        <strong style="font-size:14px">×${item.Qty}${amtStr}</strong>
+        <button class="del-btn sm" data-si-pending-index="${i}">✕</button>
+      </div>`;
+    }).join('');
+    container.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = parseInt(this.dataset.siPendingIndex);
+        siPendingItems.splice(idx, 1);
+        renderSiPendingItems();
+      });
+    });
+  }
+
   function renderStockInDetailsHtml(siID) {
     const details = getStockInDetails(siID);
     if (details.length === 0) return '<div style="font-size:13px">-</div>';
     return details.map(d => {
       const productName = escapeHTML(getProdName(d.ProductID));
       const unit = getProdUnit(d.ProductID);
+      const qty = Number(d.Qty || 0);
+      const uprice = Number(d.UnitPrice || 0);
+      const lineAmount = Number(d.LineAmount || 0);
+      const pricePart = uprice ? ` <span class="price">@RM${uprice.toFixed(2)}</span>` : '';
+      const amountPart = lineAmount ? `<em>RM ${lineAmount.toFixed(2)}</em>` : (uprice ? `<em>RM ${(qty * uprice).toFixed(2)}</em>` : '');
       return `<div class="order-detail-line">
-        <span>${productName}</span>
-        <strong>${Number(d.Qty || 0)} ${unit}</strong>
+        <span>${productName}${pricePart}</span>
+        <strong>${qty} ${unit}${amountPart}</strong>
       </div>`;
     }).join('');
   }
@@ -1101,11 +1135,26 @@ function applyPermissions() {
             <div class="stock-num">${Number(p.StockBalance || 0)}</div>
             <div class="stock-unit">${p.Unit || 'kg'}</div>
           </div>
+          ${isAdmin() ? `<button class="edit-btn" data-type="product" data-id="${p.ProductID}" style="background:var(--blue-light);color:var(--blue);border:none;width:28px;height:28px;border-radius:8px;font-size:14px;cursor:pointer" title="编辑产品">✎</button>` : ''}
           ${isAdmin() ? `<button class="del-btn" data-type="product" data-id="${p.ProductID}">✕</button>` : ''}
         </div>
       </div>`
     ).join('');
     attachDeleteHandlers(container);
+    attachEditProductHandlers(container);
+    renderProductsPageAdditions();
+  }
+
+  function renderProductsPageAdditions() {
+    const sectionTitle = document.querySelector('#page-products .section-title');
+    if (sectionTitle && isAdmin() && !document.getElementById('btn-merge-sku-header')) {
+      const mergeBtn = document.createElement('button');
+      mergeBtn.id = 'btn-merge-sku-header';
+      mergeBtn.textContent = '🔀 合并 SKU';
+      mergeBtn.style.cssText = 'float:right;font-size:11px;background:var(--red-light);color:var(--red);border:1px solid var(--border);border-radius:8px;padding:2px 8px;cursor:pointer;font-weight:500';
+      mergeBtn.onclick = window.openMergeSku;
+      sectionTitle.appendChild(mergeBtn);
+    }
   }
 
   function renderSuppliers() {
@@ -1138,10 +1187,20 @@ function applyPermissions() {
   function renderStockIn() {
     const q = (document.getElementById('stockin-search').value || '').toLowerCase();
     const container = document.getElementById('stockin-list');
-    const list = state.stockIns.filter(s =>
-      s.StockInID.toLowerCase().includes(q) ||
-      getSupName(s.SupplierID).toLowerCase().includes(q)
-    );
+
+    // 日期筛选
+    const dateInput = document.getElementById('stockin-date');
+    const today = new Date().toISOString().slice(0,10);
+    if (!dateInput.value) dateInput.value = today;
+    const filterDate = dateInput.value;
+
+    const list = state.stockIns.filter(s => {
+      const sDate = String(s.Date).slice(0,10);
+      if (sDate !== filterDate) return false;
+      if (q && !s.StockInID.toLowerCase().includes(q) &&
+          !getSupName(s.SupplierID).toLowerCase().includes(q)) return false;
+      return true;
+    });
     if (list.length === 0) {
       container.innerHTML = '<div class="empty">' + t('noStockin') + '</div>';
       return;
@@ -1180,7 +1239,19 @@ function applyPermissions() {
   function renderOrders() {
     const q = (document.getElementById('order-search').value || '').toLowerCase();
     const container = document.getElementById('orders-list');
-    const list = state.orders.filter(o => orderMatchesSearch(o, q));
+
+    // 日期筛选
+    const dateInput = document.getElementById('order-date');
+    const today = new Date().toISOString().slice(0,10);
+    if (!dateInput.value) dateInput.value = today;
+    const filterDate = dateInput.value;
+
+    const list = state.orders.filter(o => {
+      const oDate = String(o.Date).slice(0,10);
+      if (oDate !== filterDate) return false;
+      if (!q) return true;
+      return orderMatchesSearch(o, q);
+    });
     if (list.length === 0) {
       container.innerHTML = '<div class="empty">' + t('noOrders') + '</div>';
       return;
@@ -1254,7 +1325,7 @@ function applyPermissions() {
       for (const o of orders) {
         total += Number(o.TotalAmount || 0);
         count++;
-        const url2 = SB + '/po_details?POID=eq.' + encodeURIComponent(o.POID) + '&select=ProductID,QTY';
+        const url2 = SB + '/po_details?POID=eq.' + encodeURIComponent(o.POID) + '&select=ProductID,QTY,UnitPrice,LineAmount';
         const res2 = await fetch(url2, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
@@ -1265,8 +1336,10 @@ function applyPermissions() {
             const qty = Number(d.QTY || 0);
             const name = getProdName(d.ProductID);
             const unit = getProdUnit(d.ProductID);
+            const uprice = Number(d.UnitPrice || 0);
+            const lineAmt = Number(d.LineAmount || 0);
             totalBoxes += qty;
-            orderItems.push({ ProductID: d.ProductID, name, unit, qty });
+            orderItems.push({ ProductID: d.ProductID, name, unit, qty, uprice, lineAmt });
 
             const key = d.ProductID;
             const current = productSummary.get(key) || { ProductID: key, name, unit, qty: 0 };
@@ -1291,10 +1364,15 @@ function applyPermissions() {
         .join('');
 
       const orderHtml = orderRows.map(o => {
-        const itemHtml = o.items.map(item => `<div class="report-order-item">
-          <span>${escapeHTML(item.name)}</span>
-          <strong>${item.qty} ${escapeHTML(item.unit)}</strong>
-        </div>`).join('');
+        const itemHtml = o.items.map(item => {
+          const priceStr = item.uprice ? ' @RM' + item.uprice.toFixed(2) : '';
+          const lineAmt = item.lineAmt || (item.uprice ? item.qty * item.uprice : 0);
+          const lineStr = lineAmt ? ' RM ' + lineAmt.toFixed(2) : '';
+          return '<div class="report-order-item">' +
+            '<span>' + escapeHTML(item.name) + priceStr + '</span>' +
+            '<strong>' + item.qty + ' ' + escapeHTML(item.unit) + lineStr + '</strong>' +
+          '</div>';
+        }).join('');
         return `<div class="card report-order-card">
           <div class="row-flex">
             <span class="mono">${escapeHTML(o.POID)}</span>
@@ -1426,6 +1504,8 @@ function applyPermissions() {
       document.getElementById('si-edit-rows').innerHTML = '';
       document.getElementById('si-new-row-area').style.display = '';
       document.getElementById('f-amount').value = '';
+      siPendingItems = [];
+      renderSiPendingItems();
     }
     if (state.currentModal) {
       document.getElementById(state.currentModal).classList.remove('open');
@@ -1436,6 +1516,14 @@ function applyPermissions() {
   function requestCloseModal() {
     if (state.currentModal === 'modal-order' && hasOrderDraftData()) {
       if (!confirm('确定取消这张出货单？已输入的内容会清空。')) return;
+    }
+    if (state.currentModal === 'modal-si') {
+      const editingSIID = document.getElementById('f-editing-siid').value;
+      if (editingSIID && document.querySelectorAll('#si-edit-rows .si-edit-row').length > 0) {
+        if (!confirm('确定取消编辑？更改不会保存。')) return;
+      } else if (siPendingItems.length > 0) {
+        if (!confirm('确定取消？已添加的产品清单将清空。')) return;
+      }
     }
     closeModal();
   }
@@ -1506,8 +1594,11 @@ function applyPermissions() {
         });
         for (const item of siPendingItems) {
           const detailID = Math.random().toString(36).slice(2, 10);
+          const unitPrice = Number(item.UnitPrice || 0);
+          const lineAmount = unitPrice ? item.Qty * unitPrice : 0;
           await sbPost('stock_in_details', {
-            DetailID: detailID, StockInID: stockInID, ProductID: item.ProductID, Qty: item.Qty
+            DetailID: detailID, StockInID: stockInID, ProductID: item.ProductID, Qty: item.Qty,
+            UnitPrice: unitPrice, LineAmount: lineAmount
           });
         }
         siPendingItems = [];
@@ -1539,16 +1630,32 @@ function applyPermissions() {
   window.confirmStockIn = async function(stockInID) {
     if (!canUseModal('modal-si')) { showToast(t('noPermission'), 'err'); return; }
     try {
-      // 防重复：先检查当前状态
-      const si = await sbGetFiltered('stock_ins', 'StockInID', stockInID);
-      if (!si || si.length === 0) { showToast('进货单不存在', 'err'); return; }
-      if (si[0].Status !== 'pending') { showToast('此进货单已处理', 'err'); return; }
+      // 防重复确认：用条件更新 Status=pending 做原子锁定
+      // 只有当前 Status=pending 时才改为 done，避免双击/并发重复确认
+      const lockUrl = SB + '/stock_ins?StockInID=eq.' + encodeURIComponent(stockInID) + '&Status=eq.pending';
+      const lockRes = await fetch(lockUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ Status: 'done' })
+      });
+      if (!lockRes.ok) {
+        const errText = await lockRes.text();
+        // 如果没匹配到记录（已不是 pending），说明被其他人确认了
+        if (lockRes.status === 404 || errText.includes('No rows')) {
+          showToast('此进货单已被处理', 'err');
+        } else {
+          throw new Error(errText);
+        }
+        return;
+      }
 
       const details = await sbGetFiltered('stock_in_details', 'StockInID', stockInID);
       if (!details || details.length === 0) { showToast('进货单无明细', 'err'); return; }
-
-      // 先改状态为 done（锁定，防止重复确认）
-      await sbPatch('stock_ins', 'StockInID', stockInID, { Status: 'done' });
 
       // 再逐条加库存
       for (const d of details) {
@@ -1799,6 +1906,28 @@ function applyPermissions() {
   window.confirmOrder = async function(poID) {
     if (!canUseModal('modal-order')) { showToast(t('noPermission'), 'err'); return; }
     try {
+      // 防重复确认：用条件更新 Status=pending 做原子锁定
+      const lockUrl = SB + '/purchase_orders?POID=eq.' + encodeURIComponent(poID) + '&Status=eq.pending';
+      const lockRes = await fetch(lockUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ Status: 'done' })
+      });
+      if (!lockRes.ok) {
+        const errText = await lockRes.text();
+        if (lockRes.status === 404 || errText.includes('No rows')) {
+          showToast('此订单已被处理', 'err');
+        } else {
+          throw new Error(errText);
+        }
+        return;
+      }
+
       // 获取订单详情
       const details = await sbGetFiltered('po_details', 'POID', poID);
       if (!details || details.length === 0) { showToast('订单无明细', 'err'); return; }
@@ -1813,8 +1942,6 @@ function applyPermissions() {
         }
       }
 
-      // 改状态为 done
-      await sbPatch('purchase_orders', 'POID', poID, { Status: 'done' });
       showToast(t('orderConfirm') + ' ✅', 'ok');
       await loadAll();
     } catch (e) {
@@ -1878,8 +2005,148 @@ function applyPermissions() {
   };
 
   // ============================================================
-  // 删除功能（仅 admin）
+  // 产品编辑功能（admin）
   // ============================================================
+  function attachEditProductHandlers(container) {
+    container.querySelectorAll('.edit-btn[data-type="product"]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+        const productID = this.dataset.id;
+        const p = state.products.get(productID);
+        if (!p) { showToast('产品不存在', 'err'); return; }
+
+        document.getElementById('ep-id').value = productID;
+        document.getElementById('ep-name').value = p.ProductName || '';
+        document.getElementById('ep-grade').value = p.Grade || '';
+        document.getElementById('ep-unit').value = p.Unit || 'kg';
+        document.getElementById('ep-stock').value = p.StockBalance || 0;
+
+        state.currentModal = 'modal-edit-prod';
+        document.getElementById('modal-edit-prod').classList.add('open');
+      });
+    });
+  }
+
+  async function submitEditProduct() {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    const productID = document.getElementById('ep-id').value;
+    const name = document.getElementById('ep-name').value.trim();
+    if (!name) { showToast('请输入产品名称', 'err'); return; }
+    const btn = document.getElementById('btn-edit-prod');
+    btn.disabled = true;
+    btn.textContent = t('submitting');
+    try {
+      await sbPatch('products', 'ProductID', productID, {
+        ProductName: name,
+        Grade: document.getElementById('ep-grade').value,
+        Unit: document.getElementById('ep-unit').value,
+        StockBalance: parseFloat(document.getElementById('ep-stock').value) || 0
+      });
+      showToast('产品已更新', 'ok');
+      closeModal();
+      await loadAll();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+    }
+    btn.disabled = false;
+    btn.textContent = '保存更改';
+  }
+
+  // ============================================================
+  // 产品 SKU 合并功能（admin only）
+  // ============================================================
+  window.openMergeSku = function() {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+
+    const opts = Array.from(state.products.values())
+      .map(p => `<option value="${p.ProductID}">${escapeHTML(p.ProductName)} (${p.Grade || '-'}) · ${Number(p.StockBalance)} ${p.Unit || 'kg'}</option>`)
+      .join('');
+
+    document.getElementById('ms-from').innerHTML = opts;
+    document.getElementById('ms-to').innerHTML = opts;
+
+    document.getElementById('ms-preview').textContent = '请选择要合并的旧 SKU 和目标 SKU';
+    document.getElementById('btn-merge-sku').disabled = true;
+
+    state.currentModal = 'modal-merge-sku';
+    document.getElementById('modal-merge-sku').classList.add('open');
+  };
+
+  // 当两个 select 都选了时显示预览
+  function updateMergePreview() {
+    const fromID = document.getElementById('ms-from').value;
+    const toID = document.getElementById('ms-to').value;
+    const btn = document.getElementById('btn-merge-sku');
+    if (!fromID || !toID) { btn.disabled = true; return; }
+    if (fromID === toID) {
+      document.getElementById('ms-preview').textContent = '⚠️ 不能将同一个 SKU 合并到自己';
+      btn.disabled = true;
+      return;
+    }
+    const from = state.products.get(fromID);
+    const to = state.products.get(toID);
+    if (!from || !to) { btn.disabled = true; return; }
+    document.getElementById('ms-preview').innerHTML =
+      `<strong>旧 SKU:</strong> ${escapeHTML(from.ProductName)} (${from.Grade || '-'}) · 库存 ${from.StockBalance}<br>` +
+      `<strong>目标 SKU:</strong> ${escapeHTML(to.ProductName)} (${to.Grade || '-'}) · 库存 ${to.StockBalance}<br>` +
+      `<strong>合并后库存:</strong> ${Number(from.StockBalance || 0) + Number(to.StockBalance || 0)}<br>` +
+      `<span style="color:var(--red)">⚠️ 历史进货/出货记录将转移到目标 SKU</span>`;
+    btn.disabled = false;
+  }
+
+  async function submitMergeSku() {
+    if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    const fromID = document.getElementById('ms-from').value;
+    const toID = document.getElementById('ms-to').value;
+    if (!fromID || !toID) return;
+    if (fromID === toID) { showToast('不能自己合并自己', 'err'); return; }
+
+    // 二次确认
+    const from = state.products.get(fromID);
+    const to = state.products.get(toID);
+    const msg = `⚠️ 高风险操作！\n\n将合并以下 SKU：\n\n旧 SKU: ${from.ProductName} (${fromID})\n  库存: ${from.StockBalance}\n\n目标 SKU: ${to.ProductName} (${toID})\n  当前库存: ${to.StockBalance}\n  合并后: ${Number(from.StockBalance||0) + Number(to.StockBalance||0)}\n\n所有进货/出货记录中的 ProductID 将改为目标 SKU。\n\n确定继续？`;
+    if (!confirm(msg)) return;
+
+    const btn = document.getElementById('btn-merge-sku');
+    btn.disabled = true;
+    btn.textContent = t('submitting');
+    try {
+      // 1. 更新目标 SKU 库存
+      const newBalance = Number(from.StockBalance || 0) + Number(to.StockBalance || 0);
+      await sbPatch('products', 'ProductID', toID, { StockBalance: newBalance });
+
+      // 2. 批量迁移所有引用旧 ProductID 的记录（直接用 fetch PATCH by column filter）
+      const SUPABASE_KEY_LOCAL = SUPABASE_KEY;
+      const headers = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY_LOCAL,
+        'Authorization': 'Bearer ' + SUPABASE_KEY_LOCAL,
+        'Prefer': 'count=exact'
+      };
+
+      // stock_in_details: ProductID=eq.fromID → ProductID=toID
+      let url = SB + '/stock_in_details?ProductID=eq.' + encodeURIComponent(fromID);
+      let res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ ProductID: toID }) });
+      if (!res.ok) throw new Error('迁移 stock_in_details 失败: ' + await res.text());
+
+      // po_details: ProductID=eq.fromID → ProductID=toID
+      url = SB + '/po_details?ProductID=eq.' + encodeURIComponent(fromID);
+      res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ ProductID: toID }) });
+      if (!res.ok) throw new Error('迁移 po_details 失败: ' + await res.text());
+
+      // 3. 删除旧 SKU
+      await sbDelete('products', 'ProductID', fromID);
+
+      showToast(`已合并: ${from.ProductName} → ${to.ProductName}`, 'ok');
+      await auditLog('合并SKU', `${fromID}→${toID}`, `${from.ProductName} → ${to.ProductName}`);
+      closeModal();
+      await loadAll();
+    } catch (e) {
+      showToast(t('submitFail') + e.message, 'err');
+    }
+    btn.disabled = false;
+    btn.textContent = '确认合并';
+  }
   function attachDeleteHandlers(container) {
     container.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', async function() {
@@ -2028,6 +2295,8 @@ function applyPermissions() {
     if (lblSiSup) lblSiSup.textContent = t('supplier');
     const lblSiProd = document.getElementById('lbl-si-product');
     if (lblSiProd) lblSiProd.textContent = t('product');
+    const lblSiUp = document.getElementById('lbl-si-unitprice');
+    if (lblSiUp) lblSiUp.textContent = t('unitPrice') + ' (RM)';
 
     // 产品 modal
     const prodTitle = document.querySelector('#modal-prod .modal-title');
@@ -2169,6 +2438,8 @@ function applyPermissions() {
     document.getElementById('supplier-search').addEventListener('input', debouncedRenderSuppliers);
     document.getElementById('stockin-search').addEventListener('input', debouncedRenderStockIn);
     document.getElementById('order-search').addEventListener('input', debouncedRenderOrders);
+    document.getElementById('stockin-date').addEventListener('change', renderStockIn);
+    document.getElementById('order-date').addEventListener('change', renderOrders);
 
     // 产品选择 change 事件 → 更新数量单位标签
     document.getElementById('f-prod').addEventListener('change', updateQtyLabels);
@@ -2183,14 +2454,17 @@ function applyPermissions() {
     document.getElementById('btn-si-add-item').addEventListener('click', function() {
       const prodEl = document.getElementById('f-prod');
       const qtyEl = document.getElementById('f-qty');
+      const priceEl = document.getElementById('f-si-price');
       const productID = prodEl.value;
       const productName = prodEl.options[prodEl.selectedIndex]?.text || productID;
       const qty = parseInt(qtyEl.value);
       if (!qty || qty < 1) { showToast('请输入数量', 'err'); return; }
-      siPendingItems.push({ ProductID: productID, productName, Qty: qty });
+      const unitPrice = parseFloat(priceEl.value) || 0;
+      siPendingItems.push({ ProductID: productID, productName, Qty: qty, UnitPrice: unitPrice });
       renderSiPendingItems();
       qtyEl.value = '';
-      showToast(`已添加: ${productName} x${qty}`, 'ok');
+      priceEl.value = '';
+      showToast(`已添加: ${productName} x${qty}${unitPrice ? ' @RM'+unitPrice.toFixed(2) : ''}`, 'ok');
     });
 
     // Modal 背景点击关闭；出货和进货单禁止点背景关闭
@@ -2205,10 +2479,14 @@ function applyPermissions() {
     // 表单提交
     document.getElementById('btn-si').addEventListener('click', submitStockIn);
     document.getElementById('btn-prod').addEventListener('click', submitProduct);
+    document.getElementById('btn-edit-prod').addEventListener('click', submitEditProduct);
     document.getElementById('btn-supplier').addEventListener('click', submitSupplier);
     document.getElementById('btn-order').addEventListener('click', submitOrder);
     document.getElementById('btn-adduser').addEventListener('click', submitAddUser);
     document.getElementById('btn-changepw').addEventListener('click', submitChangePassword);
+    document.getElementById('btn-merge-sku').addEventListener('click', submitMergeSku);
+    document.getElementById('ms-from').addEventListener('change', updateMergePreview);
+    document.getElementById('ms-to').addEventListener('change', updateMergePreview);
 
     // 取消按钮关闭
     document.querySelectorAll('.btn-cancel').forEach(btn => {

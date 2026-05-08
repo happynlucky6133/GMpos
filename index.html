@@ -85,9 +85,10 @@
     <!-- 进货 -->
     <div class="page" id="page-stockin">
       <div class="section-title">进货记录</div>
-      <div class="search-wrap">
+      <div class="search-wrap" style="margin-bottom:8px;gap:6px">
+        <input type="date" id="stockin-date" style="flex:0 0 auto;width:155px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text1);font-size:13px">
         <span style="font-size:16px;color:var(--text2)">🔍</span>
-        <input type="text" placeholder="搜索 DO 号码..." id="stockin-search">
+        <input type="text" placeholder="搜索 DO 号码..." id="stockin-search" style="flex:1">
       </div>
       <div id="stockin-list"><div class="loading">加载中...</div></div>
     </div>
@@ -95,9 +96,10 @@
     <!-- 出货 -->
     <div class="page" id="page-orders">
       <div class="section-title">出货</div>
-      <div class="search-wrap">
+      <div class="search-wrap" style="margin-bottom:8px;gap:6px">
+        <input type="date" id="order-date" style="flex:0 0 auto;width:155px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text1);font-size:13px">
         <span style="font-size:16px;color:var(--text2)">🔍</span>
-        <input type="text" placeholder="搜索 Invoice No..." id="order-search">
+        <input type="text" placeholder="搜索 Invoice No..." id="order-search" style="flex:1">
       </div>
       <div id="orders-list"><div class="loading">加载中...</div></div>
     </div>
@@ -150,10 +152,11 @@
     </div>
     <!-- New item row area -->
     <div id="si-new-row-area" class="form-group">
-      <div style="display:flex;gap:8px;align-items:end">
-        <div style="flex:1"><label class="form-label" id="lbl-si-product">产品</label><select id="f-prod"></select></div>
-        <div style="width:100px"><label class="form-label" id="f-qty-label">数量</label><input type="number" id="f-qty" placeholder="0" min="1" inputmode="numeric" style="width:100%"></div>
-        <button class="btn-secondary" type="button" id="btn-si-add-item" style="margin-bottom:4px;white-space:nowrap">+ 添加</button>
+      <div style="display:flex;gap:6px;align-items:end;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px"><label class="form-label" id="lbl-si-product">产品</label><select id="f-prod"></select></div>
+        <div style="width:80px"><label class="form-label" id="f-qty-label">数量</label><input type="number" id="f-qty" placeholder="0" min="1" inputmode="numeric" style="width:100%"></div>
+        <div style="width:90px"><label class="form-label" id="lbl-si-unitprice">单价 (RM)</label><input type="number" id="f-si-price" placeholder="0.00" min="0" step="0.01" inputmode="decimal" style="width:100%"></div>
+        <button class="btn-secondary" type="button" id="btn-si-add-item" style="margin-bottom:4px;white-space:nowrap;padding:11px 10px;flex:0 0 auto">+ 添加</button>
       </div>
     </div>
     <!-- Pending items list -->
@@ -178,6 +181,39 @@
     <div class="form-group"><label class="form-label" id="lbl-prod-unit">单位</label><select id="np-unit"><option>kg</option><option>box</option><option>pcs</option></select></div>
     <button class="btn-primary" id="btn-prod">添加产品</button>
     <button class="btn-cancel" id="btn-prod-cancel">取消</button>
+  </div>
+</div>
+
+<!-- 编辑产品 Modal -->
+<div class="modal-bg" id="modal-edit-prod">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">编辑产品</div>
+    <input type="hidden" id="ep-id" value="">
+    <div class="form-group"><label class="form-label">产品名称</label><input type="text" id="ep-name" placeholder="输入产品名称"></div>
+    <div class="form-group"><label class="form-label">等级</label><input type="text" id="ep-grade" placeholder="输入等级"></div>
+    <div class="form-group"><label class="form-label">单位</label><select id="ep-unit"><option>kg</option><option>box</option><option>pcs</option></select></div>
+    <div class="form-group"><label class="form-label">库存数量</label><input type="number" id="ep-stock" placeholder="0" min="0" step="0.01" inputmode="decimal"></div>
+    <button class="btn-primary" id="btn-edit-prod">保存更改</button>
+    <button class="btn-cancel" id="btn-edit-prod-cancel">取消</button>
+  </div>
+</div>
+
+<!-- 合并 SKU Modal -->
+<div class="modal-bg" id="modal-merge-sku">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">合并 SKU</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">将旧 SKU 的产品、历史记录和库存合并到目标 SKU，然后删除旧 SKU。此操作不可撤销！</p>
+    <div class="form-group"><label class="form-label">旧 SKU (要合并掉的)</label>
+      <select id="ms-from"></select>
+    </div>
+    <div class="form-group"><label class="form-label">目标 SKU (合并到它)</label>
+      <select id="ms-to"></select>
+    </div>
+    <div id="ms-preview" style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:8px;background:var(--amber-light);border-radius:8px"></div>
+    <button class="btn-primary" id="btn-merge-sku" style="background:var(--red)">确认合并</button>
+    <button class="btn-cancel" id="btn-merge-sku-cancel">取消</button>
   </div>
 </div>
 
