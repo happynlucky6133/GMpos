@@ -71,11 +71,15 @@
       editOrder: '编辑出货',
       orderUpdated: '订单已更新！',
       addOrderItem: '添加产品',
+      chooseProduct: '选择产品',
       unitPrice: '单价',
       lineTotal: '小计',
       itemTotal: '明细合计',
+      priceRequired: '请输入单价',
       searchInvoice: '搜索 Invoice No...',
       totalAmount: '总金额 (RM)',
+      invoiceNo: 'Invoice No',
+      autoGenerate: '自动生成',
       noOrders: '暂无出货记录',
       // 产品
       newProduct: '新增产品',
@@ -189,11 +193,15 @@
       editOrder: 'Edit Stok Keluar',
       orderUpdated: 'Pesanan diperbarui!',
       addOrderItem: 'Tambah Produk',
+      chooseProduct: 'Pilih Produk',
       unitPrice: 'Harga',
       lineTotal: 'Subtotal',
       itemTotal: 'Total Item',
+      priceRequired: 'Masukkan harga',
       searchInvoice: 'Cari Invoice...',
       totalAmount: 'Total (RM)',
+      invoiceNo: 'Invoice No',
+      autoGenerate: 'Otomatis',
       noOrders: 'Belum ada catatan keluar',
       newProduct: 'Tambah Produk',
       addProduct: 'Tambah Produk',
@@ -301,11 +309,15 @@
       editOrder: 'Edit Order',
       orderUpdated: 'Order updated!',
       addOrderItem: 'Add Product',
+      chooseProduct: 'Choose Product',
       unitPrice: 'Unit Price',
       lineTotal: 'Line Total',
       itemTotal: 'Item Total',
+      priceRequired: 'Enter unit price',
       searchInvoice: 'Search Invoice No...',
       totalAmount: 'Total Amount (RM)',
+      invoiceNo: 'Invoice No',
+      autoGenerate: 'Auto generate',
       noOrders: 'No orders yet',
       newProduct: 'New Product',
       addProduct: 'Add Product',
@@ -732,17 +744,18 @@ function applyPermissions() {
   }
 
   function productOptions(selectedID) {
-    return Array.from(state.products.values())
+    const placeholder = `<option value="" ${selectedID ? '' : 'selected'} disabled>${t('chooseProduct')}</option>`;
+    return placeholder + Array.from(state.products.values())
       .map(p => `<option value="${p.ProductID}" ${p.ProductID === selectedID ? 'selected' : ''}>${escapeHTML(p.ProductName)} (${escapeHTML(p.Grade || '')})</option>`)
       .join('');
   }
 
   function makeOrderDraftRow(detail) {
-    const productID = detail && detail.ProductID ? detail.ProductID : (Array.from(state.products.keys())[0] || '');
+    const productID = detail && detail.ProductID ? detail.ProductID : '';
     const qty = Number((detail && detail.QTY) || 1);
     const savedPrice = Number((detail && (detail.UnitPrice || detail.Price)) || 0);
     const savedAmount = Number((detail && (detail.LineAmount || detail.Amount)) || 0);
-    const unitPrice = savedPrice || (qty > 0 && savedAmount ? savedAmount / qty : 0);
+    const unitPrice = savedPrice || (qty > 0 && savedAmount ? savedAmount / qty : '');
     return {
       id: (detail && detail.DetailID) || Math.random().toString(36).slice(2, 10),
       detailID: detail && detail.DetailID,
@@ -764,6 +777,8 @@ function applyPermissions() {
   function syncOrderTotal() {
     const amount = document.getElementById('o-amount');
     if (amount) amount.value = calculateOrderTotal().toFixed(2);
+    const submit = document.getElementById('btn-order');
+    if (submit) submit.disabled = orderDraftRows.length === 0 || calculateOrderTotal() <= 0;
   }
 
   function updateOrderDraftFromDom() {
@@ -773,9 +788,10 @@ function applyPermissions() {
       if (!row) return;
       row.productID = rowEl.querySelector('.order-product-select').value;
       row.qty = Number(rowEl.querySelector('.order-qty-input').value || 0);
-      row.unitPrice = Number(rowEl.querySelector('.order-price-input').value || 0);
+      const priceValue = rowEl.querySelector('.order-price-input').value;
+      row.unitPrice = priceValue === '' ? '' : Number(priceValue || 0);
       const line = rowEl.querySelector('.order-line-total');
-      if (line) line.textContent = 'RM ' + (row.qty * row.unitPrice).toFixed(2);
+      if (line) line.textContent = row.qty && row.unitPrice ? 'RM ' + (row.qty * row.unitPrice).toFixed(2) : 'RM --';
     });
     syncOrderTotal();
   }
@@ -796,11 +812,11 @@ function applyPermissions() {
           </div>
           <div class="form-group">
             <label class="form-label">${t('unitPrice')} (RM)</label>
-            <input class="order-price-input" type="number" min="0" step="0.01" inputmode="decimal" value="${Number(row.unitPrice || 0).toFixed(2)}">
+            <input class="order-price-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" value="${row.unitPrice === '' ? '' : Number(row.unitPrice || 0).toFixed(2)}">
           </div>
           <div class="form-group">
             <label class="form-label">${t('lineTotal')}</label>
-            <div class="order-line-total">RM ${(Number(row.qty || 0) * Number(row.unitPrice || 0)).toFixed(2)}</div>
+            <div class="order-line-total">${row.qty && row.unitPrice ? 'RM ' + (Number(row.qty || 0) * Number(row.unitPrice || 0)).toFixed(2) : 'RM --'}</div>
           </div>
         </div>
         <button class="order-row-remove" type="button" aria-label="Remove">×</button>
@@ -836,6 +852,9 @@ function applyPermissions() {
     })).filter(row => row.ProductID);
     if (rows.length === 0 || rows.some(row => !row.QTY || row.QTY < 1)) {
       throw new Error(t('qty'));
+    }
+    if (rows.some(row => !row.UnitPrice || row.UnitPrice <= 0)) {
+      throw new Error(t('priceRequired'));
     }
     return rows;
   }
@@ -1820,6 +1839,10 @@ function applyPermissions() {
     if (lblOrderProd) lblOrderProd.textContent = t('product');
     const lblOrderAmt = document.getElementById('lbl-order-amount');
     if (lblOrderAmt) lblOrderAmt.textContent = t('totalAmount');
+    const lblOrderInvoice = document.getElementById('lbl-order-invoice');
+    if (lblOrderInvoice) lblOrderInvoice.textContent = t('invoiceNo');
+    const orderPOID = document.getElementById('o-poid');
+    if (orderPOID) orderPOID.placeholder = t('autoGenerate');
     const btnOrderAddItem = document.getElementById('btn-order-add-item');
     if (btnOrderAddItem) btnOrderAddItem.textContent = '+ ' + t('addOrderItem');
 
