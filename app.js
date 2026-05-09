@@ -2375,8 +2375,8 @@ function applyPermissions() {
         }
         const fallbackPOID = orderMeta.ExternalDocNo || orderMeta.InvoiceNo || poID;
         await postPurchaseOrderWithInvoice(
-          Object.assign({ POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount }, orderMeta),
-          { POID: fallbackPOID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount }
+          Object.assign({ POID: poID, Date: dateStr, Time: timeStr, CustomerID: 'WALK-IN', Status: 'pending', TotalAmount: totalAmount }, orderMeta),
+          { POID: fallbackPOID, Date: dateStr, Time: timeStr, CustomerID: 'WALK-IN', Status: 'pending', TotalAmount: totalAmount }
         );
         const detailPOID = purchaseOrdersInvoiceColumnReady ? poID : fallbackPOID;
         for (const row of rows) {
