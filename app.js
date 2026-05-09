@@ -86,7 +86,10 @@
       searchInvoice: '搜索 Invoice No...',
       totalAmount: '总金额 (RM)',
       invoiceNo: 'Invoice No',
-      autoGenerate: '自动生成',
+      externalInvoiceNo: '母公司 POS Invoice No',
+      internalOrderNo: 'GMpos 记录号',
+      autoGenerate: '可留空，之后也能补',
+      invoiceExists: 'Invoice No 已存在',
       noOrders: '暂无出货记录',
       // 产品
       newProduct: '新增产品',
@@ -172,6 +175,9 @@
       pwdMismatch: '两次新密码不一致',
       wrongCurrentPwd: '当前密码错误',
       fillAll: '请填写所有字段',
+      addAtLeastOneProduct: '请至少添加一个产品',
+      keepOneRow: '至少保留一行',
+      addedPrefix: '已添加: ',
       // 印尼文专用
       langName: '中文'
     },
@@ -250,7 +256,10 @@
       searchInvoice: 'Cari Invoice...',
       totalAmount: 'Total (RM)',
       invoiceNo: 'Invoice No',
-      autoGenerate: 'Otomatis',
+      externalInvoiceNo: 'Invoice No POS pusat',
+      internalOrderNo: 'No catatan GMpos',
+      autoGenerate: 'Boleh kosong, bisa diisi nanti',
+      invoiceExists: 'Invoice No sudah ada',
       noOrders: 'Belum ada catatan keluar',
       newProduct: 'Tambah Produk',
       addProduct: 'Tambah Produk',
@@ -331,6 +340,9 @@
       pwdMismatch: 'Kata sandi baru tidak cocok',
       wrongCurrentPwd: 'Kata sandi saat ini salah',
       fillAll: 'Isi semua bidang',
+      addAtLeastOneProduct: 'Tambahkan minimal satu produk',
+      keepOneRow: 'Minimal sisakan satu baris',
+      addedPrefix: 'Ditambahkan: ',
       langName: 'Indonesia'
     },
     en: {
@@ -408,7 +420,10 @@
       searchInvoice: 'Search Invoice No...',
       totalAmount: 'Total Amount (RM)',
       invoiceNo: 'Invoice No',
-      autoGenerate: 'Auto generate',
+      externalInvoiceNo: 'HQ POS Invoice No',
+      internalOrderNo: 'GMpos record no',
+      autoGenerate: 'Optional, can be filled later',
+      invoiceExists: 'Invoice No already exists',
       noOrders: 'No orders yet',
       newProduct: 'New Product',
       addProduct: 'Add Product',
@@ -489,6 +504,9 @@
       pwdMismatch: 'New passwords do not match',
       wrongCurrentPwd: 'Current password is wrong',
       fillAll: 'Fill all fields',
+      addAtLeastOneProduct: 'Add at least one product',
+      keepOneRow: 'Keep at least one row',
+      addedPrefix: 'Added: ',
       langName: 'English'
     }
   };
@@ -525,6 +543,7 @@
   let supNameCache = new Map();
   let orderDraftRows = [];
   let poDetailsAmountColumnsReady = true;
+  let purchaseOrdersInvoiceColumnReady = true;
   let siPendingItems = [];
   // 进货日期筛选
   let stockInFilterDate = '';
@@ -684,6 +703,15 @@ function applyPermissions() {
     });
     if (!res.ok) throw new Error('RPC ' + rpcName + ' failed: ' + await res.text());
     return res.json();
+  }
+
+  async function sbGetMaybeFiltered(table, col, val, opts = {}) {
+    try {
+      return await sbGetFiltered(table, col, val, opts);
+    } catch (e) {
+      if (String(e.message || '').includes(col)) return null;
+      throw e;
+    }
   }
 
   // ============================================================
@@ -944,9 +972,26 @@ function applyPermissions() {
     }).join('');
   }
 
+  function orderInvoiceNo(order) {
+    return String((order && (order.InvoiceNo || order.ExternalInvoiceNo)) || '').trim();
+  }
+
+  function orderDisplayNo(order) {
+    return orderInvoiceNo(order) || String((order && order.POID) || '').trim();
+  }
+
+  function orderInternalHint(order) {
+    const invoice = orderInvoiceNo(order);
+    const poid = String((order && order.POID) || '').trim();
+    if (!invoice || !poid || invoice === poid) return '';
+    return t('internalOrderNo') + ': ' + poid;
+  }
+
   function orderMatchesSearch(order, query) {
     if (!query) return true;
+    const invoice = orderInvoiceNo(order);
     const haystack = [
+      invoice,
       order.POID,
       order.Date,
       order.Status,
@@ -1109,6 +1154,79 @@ function applyPermissions() {
       ProductID: detail.ProductID,
       QTY: detail.QTY
     });
+  }
+
+  async function patchOrderDetail(detailID, detail) {
+    const fullPayload = {
+      POID: detail.POID,
+      ProductID: detail.ProductID,
+      QTY: detail.QTY,
+      UnitPrice: detail.UnitPrice,
+      LineAmount: detail.LineAmount
+    };
+    if (poDetailsAmountColumnsReady) {
+      try {
+        return await sbPatch('po_details', 'DetailID', detailID, fullPayload);
+      } catch (e) {
+        if (!String(e.message || '').includes('UnitPrice') && !String(e.message || '').includes('LineAmount')) throw e;
+        poDetailsAmountColumnsReady = false;
+      }
+    }
+    return sbPatch('po_details', 'DetailID', detailID, {
+      POID: detail.POID,
+      ProductID: detail.ProductID,
+      QTY: detail.QTY
+    });
+  }
+
+  function isMissingColumnError(e, columnName) {
+    const msg = String((e && e.message) || e || '');
+    return msg.includes(columnName) || msg.includes('PGRST204');
+  }
+
+  async function invoiceExists(invoiceNo, exceptPOID = '') {
+    const invoice = String(invoiceNo || '').trim();
+    if (!invoice) return false;
+
+    if (purchaseOrdersInvoiceColumnReady) {
+      const byInvoice = await sbGetMaybeFiltered('purchase_orders', 'InvoiceNo', invoice, { select: 'POID,InvoiceNo' });
+      if (byInvoice === null) {
+        purchaseOrdersInvoiceColumnReady = false;
+      } else if (byInvoice.some(o => o.POID !== exceptPOID)) {
+        return true;
+      }
+    }
+
+    const byOldPOID = await sbGetFiltered('purchase_orders', 'POID', invoice, { select: 'POID' });
+    return byOldPOID.some(o => o.POID !== exceptPOID);
+  }
+
+  async function postPurchaseOrderWithInvoice(payload, fallbackPayload) {
+    if (purchaseOrdersInvoiceColumnReady) {
+      try {
+        return await sbPost('purchase_orders', payload);
+      } catch (e) {
+        if (!isMissingColumnError(e, 'InvoiceNo')) throw e;
+        purchaseOrdersInvoiceColumnReady = false;
+      }
+    }
+    return sbPost('purchase_orders', fallbackPayload);
+  }
+
+  async function patchPurchaseOrderInvoice(poid, invoiceNo, totalAmount) {
+    if (purchaseOrdersInvoiceColumnReady) {
+      try {
+        await sbPatch('purchase_orders', 'POID', poid, { InvoiceNo: invoiceNo, TotalAmount: totalAmount });
+        return { finalPOID: poid, poidChanged: false };
+      } catch (e) {
+        if (!isMissingColumnError(e, 'InvoiceNo')) throw e;
+        purchaseOrdersInvoiceColumnReady = false;
+      }
+    }
+
+    const finalPOID = invoiceNo || poid;
+    await sbPatch('purchase_orders', 'POID', poid, { POID: finalPOID, TotalAmount: totalAmount });
+    return { finalPOID, poidChanged: finalPOID !== poid };
   }
 
   function stockBadge(n) {
@@ -1414,7 +1532,7 @@ function applyPermissions() {
     const list = state.orders.filter(o => {
       if (q) {
         // 有搜索词：跨全部记录，支持模糊匹配（去掉前缀）
-        const searchText = o.POID.toLowerCase();
+        const searchText = [orderDisplayNo(o), o.POID].join(' ').toLowerCase();
         const searchDigits = searchText.replace(/[^0-9]/g, '');
         const qDigits = q.replace(/[^0-9]/g, '');
         if (searchText.includes(q) || (qDigits && searchDigits.includes(qDigits))) return true;
@@ -1433,6 +1551,8 @@ function applyPermissions() {
     container.innerHTML = searchNotice + [...list].reverse().map(o => {
       const date = String(o.Date).slice(0,10);
       const status = o.Status || 'pending';
+      const displayNo = orderDisplayNo(o);
+      const internalHint = orderInternalHint(o);
       let statusBadge = '';
       let actions = '';
       if (status === 'pending') {
@@ -1450,12 +1570,12 @@ function applyPermissions() {
 
       return `<div class="card">
         <div class="row-flex" style="margin-bottom:5px">
-          <span class="mono">${o.POID}</span>
+          <span class="mono">${escapeHTML(displayNo)}</span>
           ${statusBadge}
           ${isAdmin() ? `<button class="del-btn sm" onclick="window.deleteOrder('${o.POID}')">✕</button>` : ''}
         </div>
         <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
-        <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}</div>
+        <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}${internalHint ? ' · ' + escapeHTML(internalHint) : ''}</div>
         ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
@@ -1486,7 +1606,7 @@ function applyPermissions() {
     container.innerHTML = '<div class="loading">' + t('loading') + '</div>';
 
     try {
-      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&select=POID,Time,TotalAmount&order=Time';
+      const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&order=Time';
       const res = await fetch(url, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
@@ -1520,7 +1640,7 @@ function applyPermissions() {
             productSummary.set(key, current);
           }
         }
-        orderRows.push({ POID: o.POID, Time: o.Time, TotalAmount: Number(o.TotalAmount || 0), items: orderItems });
+        orderRows.push({ POID: o.POID, InvoiceNo: orderInvoiceNo(o), Time: o.Time, TotalAmount: Number(o.TotalAmount || 0), items: orderItems });
       }
 
       if (count === 0) {
@@ -1548,7 +1668,7 @@ function applyPermissions() {
         }).join('');
         return `<div class="card report-order-card">
           <div class="row-flex">
-            <span class="mono">${escapeHTML(o.POID)}</span>
+            <span class="mono">${escapeHTML(orderDisplayNo(o))}</span>
             <strong>RM ${o.TotalAmount.toFixed(2)}</strong>
           </div>
           <div class="row-sub">${String(o.Time || '').slice(0,5)}</div>
@@ -1759,7 +1879,7 @@ function applyPermissions() {
       }
     } else {
       // === 新建模式：创建 pending 进货单（不扣库存） ===
-      if (siPendingItems.length === 0) { showToast('请至少添加一个产品', 'err'); return; }
+      if (siPendingItems.length === 0) { showToast(t('addAtLeastOneProduct'), 'err'); return; }
       const btn = document.getElementById('btn-si');
       btn.disabled = true;
       btn.textContent = t('submitting');
@@ -1909,7 +2029,7 @@ function applyPermissions() {
         const row = this.closest('.si-edit-row');
         // 至少保留一行
         if (document.querySelectorAll('#si-edit-rows .si-edit-row').length <= 1) {
-          showToast('至少保留一行', 'err');
+          showToast(t('keepOneRow'), 'err');
           return;
         }
         row.remove();
@@ -2048,39 +2168,55 @@ function applyPermissions() {
         const dateStr = todayLocal();
       const timeStr = now.toTimeString().slice(0,8);
       const uid = Math.random().toString(36).slice(2, 6);
-      const requestedPOID = document.getElementById('o-poid').value.trim();
-      const poID = requestedPOID || `PO-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
+      const requestedInvoiceNo = document.getElementById('o-poid').value.trim();
+      const poID = `GM-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
       const editingPOID = document.getElementById('o-editing-poid').value;
       const totalAmount = rows.reduce((sum, row) => sum + row.LineAmount, 0);
 
       if (editingPOID) {
-        const finalPOID = requestedPOID || editingPOID;
-        if (finalPOID !== editingPOID) {
-          const existing = await sbGetFiltered('purchase_orders', 'POID', finalPOID, { select: 'POID' });
-          if (existing && existing.length > 0) throw new Error('Invoice No 已存在');
+        if (requestedInvoiceNo && await invoiceExists(requestedInvoiceNo, editingPOID)) {
+          throw new Error(t('invoiceExists'));
         }
-        await sbPatch('purchase_orders', 'POID', editingPOID, { POID: finalPOID, TotalAmount: totalAmount });
-        await sbDelete('po_details', 'POID', editingPOID).catch(() => {});
-        await sbDelete('po_details', 'POID', finalPOID).catch(() => {});
+        const patchResult = await patchPurchaseOrderInvoice(editingPOID, requestedInvoiceNo, totalAmount);
+        const finalPOID = patchResult.finalPOID;
+        const keptDetailIds = new Set();
         for (const row of rows) {
-          await postOrderDetail({
-            DetailID: row.detailID || Math.random().toString(36).slice(2, 10),
+          const detailID = row.detailID || Math.random().toString(36).slice(2, 10);
+          keptDetailIds.add(detailID);
+          const detailPayload = {
+            DetailID: detailID,
             POID: finalPOID,
             ProductID: row.ProductID,
             QTY: row.QTY,
             UnitPrice: row.UnitPrice,
             LineAmount: row.LineAmount
-          });
+          };
+          if (row.detailID) {
+            await patchOrderDetail(row.detailID, detailPayload);
+          } else {
+            await postOrderDetail(detailPayload);
+          }
+        }
+        for (const d of getOrderDetails(editingPOID)) {
+          if (!keptDetailIds.has(d.DetailID)) {
+            await sbDelete('po_details', 'DetailID', d.DetailID);
+          }
         }
         showToast(t('orderUpdated'), 'ok');
       } else {
-        const existing = await sbGetFiltered('purchase_orders', 'POID', poID, { select: 'POID' });
-        if (existing && existing.length > 0) throw new Error('Invoice No 已存在');
-        await sbPost('purchase_orders', { POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount });
+        if (requestedInvoiceNo && await invoiceExists(requestedInvoiceNo)) {
+          throw new Error(t('invoiceExists'));
+        }
+        const fallbackPOID = requestedInvoiceNo || poID;
+        await postPurchaseOrderWithInvoice(
+          { POID: poID, InvoiceNo: requestedInvoiceNo, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount },
+          { POID: fallbackPOID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount }
+        );
+        const detailPOID = purchaseOrdersInvoiceColumnReady ? poID : fallbackPOID;
         for (const row of rows) {
           await postOrderDetail({
             DetailID: Math.random().toString(36).slice(2, 10),
-            POID: poID,
+            POID: detailPOID,
             ProductID: row.ProductID,
             QTY: row.QTY,
             UnitPrice: row.UnitPrice,
@@ -2150,7 +2286,7 @@ function applyPermissions() {
     if (!details.length) { showToast(t('orderNoDetails'), 'err'); return; }
 
     // 预填 modal
-    document.getElementById('o-poid').value = poID;
+    document.getElementById('o-poid').value = orderInvoiceNo(order) || poID;
     document.getElementById('o-amount').value = order.TotalAmount || '';
     document.getElementById('o-editing-poid').value = poID;
     document.getElementById('o-editing-detailid').value = '';
@@ -2556,7 +2692,7 @@ function applyPermissions() {
     const lblOrderAmt = document.getElementById('lbl-order-amount');
     if (lblOrderAmt) lblOrderAmt.textContent = t('totalAmount');
     const lblOrderInvoice = document.getElementById('lbl-order-invoice');
-    if (lblOrderInvoice) lblOrderInvoice.textContent = t('invoiceNo');
+    if (lblOrderInvoice) lblOrderInvoice.textContent = t('externalInvoiceNo');
     const orderPOID = document.getElementById('o-poid');
     if (orderPOID) orderPOID.placeholder = t('autoGenerate');
     const btnOrderAddItem = document.getElementById('btn-order-add-item');
@@ -2685,7 +2821,7 @@ function applyPermissions() {
       renderSiPendingItems();
       qtyEl.value = '';
       priceEl.value = '';
-      showToast(`已添加: ${productName} x${qty}${unitPrice ? ' @RM'+unitPrice.toFixed(2) : ''}`, 'ok');
+      showToast(`${t('addedPrefix')}${productName} x${qty}${unitPrice ? ' @RM'+unitPrice.toFixed(2) : ''}`, 'ok');
     });
 
     // Modal 背景点击关闭；出货和进货单禁止点背景关闭
