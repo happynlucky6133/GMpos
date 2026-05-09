@@ -150,6 +150,11 @@
       <label class="form-label" id="lbl-si-supplier">供应商</label>
       <select id="f-sup"></select>
     </div>
+    <div class="form-group"><label class="form-label" id="lbl-si-do">DO No</label><input type="text" id="f-docno" placeholder="例如 DO84621"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label" id="lbl-si-from">From Branch</label><input type="text" id="f-from-branch" placeholder="HQ / KL"></div>
+      <div class="form-group"><label class="form-label" id="lbl-si-to">To Branch</label><input type="text" id="f-to-branch" placeholder="YP"></div>
+    </div>
     <!-- New item row area -->
     <div id="si-new-row-area" class="form-group">
       <div style="display:flex;gap:6px;align-items:end;flex-wrap:wrap">
@@ -235,7 +240,15 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">出货</div>
-    <div class="form-group"><label class="form-label" id="lbl-order-invoice">母公司 POS Invoice No</label><input type="text" id="o-poid" placeholder="可留空，之后也能补"></div>
+    <div class="form-group"><label class="form-label" id="lbl-order-type">单据类型</label><select id="o-type"><option value="pos_sale">POS 出货</option><option value="branch_transfer">分行调货</option></select></div>
+    <div class="form-group" id="order-invoice-field"><label class="form-label" id="lbl-order-invoice">母公司 POS Invoice No</label><input type="text" id="o-poid" placeholder="可留空，之后也能补"></div>
+    <div id="order-transfer-fields" style="display:none">
+      <div class="form-group"><label class="form-label" id="lbl-order-do">DO No</label><input type="text" id="o-docno" placeholder="例如 DO77069"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group"><label class="form-label" id="lbl-order-from">From Branch</label><input type="text" id="o-from-branch" placeholder="YP"></div>
+        <div class="form-group"><label class="form-label" id="lbl-order-to">To Branch</label><input type="text" id="o-to-branch" placeholder="BP"></div>
+      </div>
+    </div>
     <div class="form-group"><label class="form-label" id="lbl-order-amount">总金额 (RM)</label><input type="number" id="o-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" readonly></div>
     <div id="order-item-editor"></div>
     <button class="btn-secondary" type="button" id="btn-order-add-item">+ 添加产品</button>
@@ -278,7 +291,7 @@
   </div>
 </div>
 
-<script src="v2.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="v2.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

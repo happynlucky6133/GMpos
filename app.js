@@ -64,6 +64,8 @@
       searchAllDates: '正在跨全部日期搜索：',
       noPermission: '无权操作',
       submitFail: '提交失败: ',
+      transferIn: '进货',
+      transferOut: '出库',
       // 出货
       newOrder: '出货',
       confirmOrder: '出货',
@@ -90,6 +92,14 @@
       internalOrderNo: 'GMpos 记录号',
       autoGenerate: '可留空，之后也能补',
       invoiceExists: 'Invoice No 已存在',
+      orderType: '单据类型',
+      posSale: 'POS 出货',
+      branchTransfer: '分行调货',
+      doNo: 'DO No',
+      fromBranch: 'From Branch',
+      toBranch: 'To Branch',
+      enterDoNo: '请输入 DO No',
+      docExists: 'DO No 已存在',
       noOrders: '暂无出货记录',
       // 产品
       newProduct: '新增产品',
@@ -235,6 +245,8 @@
       searchAllDates: 'Mencari semua tanggal: ',
       noPermission: 'Tidak ada akses',
       submitFail: 'Gagal kirim: ',
+      transferIn: 'Masuk',
+      transferOut: 'Keluar',
       newOrder: 'Stok Keluar',
       confirmOrder: 'Stok Keluar',
       ordering: 'Memproses...',
@@ -260,6 +272,14 @@
       internalOrderNo: 'No catatan GMpos',
       autoGenerate: 'Boleh kosong, bisa diisi nanti',
       invoiceExists: 'Invoice No sudah ada',
+      orderType: 'Jenis Dokumen',
+      posSale: 'Stok Keluar POS',
+      branchTransfer: 'Transfer Cabang',
+      doNo: 'DO No',
+      fromBranch: 'Dari Cabang',
+      toBranch: 'Ke Cabang',
+      enterDoNo: 'Masukkan DO No',
+      docExists: 'DO No sudah ada',
       noOrders: 'Belum ada catatan keluar',
       newProduct: 'Tambah Produk',
       addProduct: 'Tambah Produk',
@@ -399,6 +419,8 @@
       searchAllDates: 'Searching all dates: ',
       noPermission: 'No permission',
       submitFail: 'Submit failed: ',
+      transferIn: 'Stock In',
+      transferOut: 'Stock Out',
       newOrder: 'New Order',
       confirmOrder: 'Confirm Order',
       ordering: 'Processing order...',
@@ -424,6 +446,14 @@
       internalOrderNo: 'GMpos record no',
       autoGenerate: 'Optional, can be filled later',
       invoiceExists: 'Invoice No already exists',
+      orderType: 'Document Type',
+      posSale: 'POS Sale',
+      branchTransfer: 'Branch Transfer',
+      doNo: 'DO No',
+      fromBranch: 'From Branch',
+      toBranch: 'To Branch',
+      enterDoNo: 'Enter DO No',
+      docExists: 'DO No already exists',
       noOrders: 'No orders yet',
       newProduct: 'New Product',
       addProduct: 'Add Product',
@@ -544,6 +574,8 @@
   let orderDraftRows = [];
   let poDetailsAmountColumnsReady = true;
   let purchaseOrdersInvoiceColumnReady = true;
+  let purchaseOrdersTransferColumnsReady = true;
+  let stockInsExternalColumnsReady = true;
   let siPendingItems = [];
   // 进货日期筛选
   let stockInFilterDate = '';
@@ -976,8 +1008,19 @@ function applyPermissions() {
     return String((order && (order.InvoiceNo || order.ExternalInvoiceNo)) || '').trim();
   }
 
+  function externalDocNo(record) {
+    return String((record && (record.ExternalDocNo || record.DocNo || record.DONo)) || '').trim();
+  }
+
+  function routeText(record) {
+    const from = String((record && record.FromBranch) || '').trim();
+    const to = String((record && record.ToBranch) || '').trim();
+    if (from && to) return from + ' → ' + to;
+    return from || to || '';
+  }
+
   function orderDisplayNo(order) {
-    return orderInvoiceNo(order) || String((order && order.POID) || '').trim();
+    return externalDocNo(order) || orderInvoiceNo(order) || String((order && order.POID) || '').trim();
   }
 
   function orderInternalHint(order) {
@@ -990,9 +1033,14 @@ function applyPermissions() {
   function orderMatchesSearch(order, query) {
     if (!query) return true;
     const invoice = orderInvoiceNo(order);
+    const docNo = externalDocNo(order);
     const haystack = [
+      docNo,
       invoice,
       order.POID,
+      order.OrderType,
+      order.FromBranch,
+      order.ToBranch,
       order.Date,
       order.Status,
       order.TotalAmount,
@@ -1124,11 +1172,22 @@ function applyPermissions() {
   function hasOrderDraftData() {
     const invoice = (document.getElementById('o-poid')?.value || '').trim();
     if (invoice) return true;
+    const docNo = (document.getElementById('o-docno')?.value || '').trim();
+    if (docNo) return true;
     return orderDraftRows.some(row =>
       row.productID ||
       Number(row.qty || 0) !== 1 ||
       Number(row.unitPrice || 0) > 0
     );
+  }
+
+  function toggleOrderTypeFields() {
+    const type = document.getElementById('o-type')?.value || 'pos_sale';
+    const isTransfer = type === 'branch_transfer';
+    const invoiceField = document.getElementById('order-invoice-field');
+    const transferFields = document.getElementById('order-transfer-fields');
+    if (invoiceField) invoiceField.style.display = isTransfer ? 'none' : '';
+    if (transferFields) transferFields.style.display = isTransfer ? '' : 'none';
   }
 
   async function postOrderDetail(detail) {
@@ -1201,32 +1260,78 @@ function applyPermissions() {
     return byOldPOID.some(o => o.POID !== exceptPOID);
   }
 
+  async function orderDocExists(docNo, exceptPOID = '') {
+    const doc = String(docNo || '').trim();
+    if (!doc) return false;
+    if (purchaseOrdersTransferColumnsReady) {
+      const byDoc = await sbGetMaybeFiltered('purchase_orders', 'ExternalDocNo', doc, { select: 'POID,ExternalDocNo' });
+      if (byDoc === null) {
+        purchaseOrdersTransferColumnsReady = false;
+      } else if (byDoc.some(o => o.POID !== exceptPOID)) {
+        return true;
+      }
+    }
+    const byOldPOID = await sbGetFiltered('purchase_orders', 'POID', doc, { select: 'POID' });
+    return byOldPOID.some(o => o.POID !== exceptPOID);
+  }
+
+  function missingAnyColumn(e, columns) {
+    return columns.some(col => isMissingColumnError(e, col));
+  }
+
   async function postPurchaseOrderWithInvoice(payload, fallbackPayload) {
     if (purchaseOrdersInvoiceColumnReady) {
       try {
         return await sbPost('purchase_orders', payload);
       } catch (e) {
-        if (!isMissingColumnError(e, 'InvoiceNo')) throw e;
+        if (!missingAnyColumn(e, ['InvoiceNo', 'OrderType', 'ExternalDocNo', 'FromBranch', 'ToBranch'])) throw e;
         purchaseOrdersInvoiceColumnReady = false;
+        purchaseOrdersTransferColumnsReady = false;
       }
     }
     return sbPost('purchase_orders', fallbackPayload);
   }
 
-  async function patchPurchaseOrderInvoice(poid, invoiceNo, totalAmount) {
+  async function patchPurchaseOrderMeta(poid, meta, totalAmount) {
     if (purchaseOrdersInvoiceColumnReady) {
       try {
-        await sbPatch('purchase_orders', 'POID', poid, { InvoiceNo: invoiceNo, TotalAmount: totalAmount });
+        await sbPatch('purchase_orders', 'POID', poid, Object.assign({}, meta, { TotalAmount: totalAmount }));
         return { finalPOID: poid, poidChanged: false };
       } catch (e) {
-        if (!isMissingColumnError(e, 'InvoiceNo')) throw e;
+        if (!missingAnyColumn(e, ['InvoiceNo', 'OrderType', 'ExternalDocNo', 'FromBranch', 'ToBranch'])) throw e;
         purchaseOrdersInvoiceColumnReady = false;
+        purchaseOrdersTransferColumnsReady = false;
       }
     }
 
-    const finalPOID = invoiceNo || poid;
+    const finalPOID = meta.ExternalDocNo || meta.InvoiceNo || poid;
     await sbPatch('purchase_orders', 'POID', poid, { POID: finalPOID, TotalAmount: totalAmount });
     return { finalPOID, poidChanged: finalPOID !== poid };
+  }
+
+  async function postStockInWithExternal(payload, fallbackPayload) {
+    if (stockInsExternalColumnsReady) {
+      try {
+        return await sbPost('stock_ins', payload);
+      } catch (e) {
+        if (!missingAnyColumn(e, ['ExternalDocNo', 'FromBranch', 'ToBranch'])) throw e;
+        stockInsExternalColumnsReady = false;
+      }
+    }
+    return sbPost('stock_ins', fallbackPayload);
+  }
+
+  async function patchStockInMeta(stockInID, payload, fallbackPayload) {
+    if (stockInsExternalColumnsReady) {
+      try {
+        await sbPatch('stock_ins', 'StockInID', stockInID, payload);
+        return;
+      } catch (e) {
+        if (!missingAnyColumn(e, ['ExternalDocNo', 'FromBranch', 'ToBranch'])) throw e;
+        stockInsExternalColumnsReady = false;
+      }
+    }
+    await sbPatch('stock_ins', 'StockInID', stockInID, fallbackPayload);
   }
 
   function stockBadge(n) {
@@ -1470,7 +1575,7 @@ function applyPermissions() {
     const list = state.stockIns.filter(s => {
       if (q) {
         // 有搜索词：跨全部记录，支持模糊匹配（去掉前缀）
-        const searchText = s.StockInID.toLowerCase();
+        const searchText = [externalDocNo(s), s.StockInID, s.FromBranch, s.ToBranch, getSupName(s.SupplierID)].join(' ').toLowerCase();
         const searchDigits = searchText.replace(/[^0-9]/g, '');
         const qDigits = q.replace(/[^0-9]/g, '');
         const matchesID = searchText.includes(q) || (qDigits && searchDigits.includes(qDigits));
@@ -1489,6 +1594,8 @@ function applyPermissions() {
     container.innerHTML = searchNotice + [...list].reverse().map(s => {
       const date = String(s.Date).slice(0,10);
       const status = s.Status || 'pending';
+      const displayNo = externalDocNo(s) || s.StockInID;
+      const route = routeText(s);
       let statusBadge = '';
       let actions = '';
       if (status === 'pending') {
@@ -1506,12 +1613,12 @@ function applyPermissions() {
 
       return `<div class="card">
         <div class="row-flex" style="margin-bottom:5px">
-          <span class="mono">${s.StockInID}</span>
+          <span class="mono">${escapeHTML(displayNo)}</span>
           ${statusBadge}
           ${isAdmin() && status === 'pending' ? `<button class="del-btn sm" onclick="window.deleteStockIn('${s.StockInID}')">✕</button>` : ''}
         </div>
         <div class="order-detail-list">${renderStockInDetailsHtml(s.StockInID)}</div>
-        <div class="row-sub">${escapeHTML(getSupName(s.SupplierID))} · ${date}${s.TotalAmount ? ' · RM' + Number(s.TotalAmount).toFixed(2) : ''}</div>
+        <div class="row-sub">${escapeHTML(getSupName(s.SupplierID))} · ${date}${route ? ' · ' + escapeHTML(route) : ''}${s.TotalAmount ? ' · RM' + Number(s.TotalAmount).toFixed(2) : ''}</div>
         ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
@@ -1532,7 +1639,7 @@ function applyPermissions() {
     const list = state.orders.filter(o => {
       if (q) {
         // 有搜索词：跨全部记录，支持模糊匹配（去掉前缀）
-        const searchText = [orderDisplayNo(o), o.POID].join(' ').toLowerCase();
+        const searchText = [orderDisplayNo(o), o.POID, o.OrderType, o.FromBranch, o.ToBranch].join(' ').toLowerCase();
         const searchDigits = searchText.replace(/[^0-9]/g, '');
         const qDigits = q.replace(/[^0-9]/g, '');
         if (searchText.includes(q) || (qDigits && searchDigits.includes(qDigits))) return true;
@@ -1553,6 +1660,9 @@ function applyPermissions() {
       const status = o.Status || 'pending';
       const displayNo = orderDisplayNo(o);
       const internalHint = orderInternalHint(o);
+      const isTransfer = (o.OrderType || 'pos_sale') === 'branch_transfer';
+      const typeLabel = isTransfer ? t('branchTransfer') : t('posSale');
+      const route = routeText(o);
       let statusBadge = '';
       let actions = '';
       if (status === 'pending') {
@@ -1575,7 +1685,7 @@ function applyPermissions() {
           ${isAdmin() ? `<button class="del-btn sm" onclick="window.deleteOrder('${o.POID}')">✕</button>` : ''}
         </div>
         <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
-        <div class="row-sub">${date} · RM${Number(o.TotalAmount || 0).toFixed(2)}${internalHint ? ' · ' + escapeHTML(internalHint) : ''}</div>
+        <div class="row-sub">${date} · ${typeLabel}${route ? ' · ' + escapeHTML(route) : ''} · RM${Number(o.TotalAmount || 0).toFixed(2)}${internalHint ? ' · ' + escapeHTML(internalHint) : ''}</div>
         ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
@@ -1611,7 +1721,7 @@ function applyPermissions() {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
       if (!res.ok) throw new Error(await res.text());
-      const orders = await res.json();
+      const orders = (await res.json()).filter(o => (o.OrderType || 'pos_sale') !== 'branch_transfer');
       let total = 0, count = 0, totalBoxes = 0;
       const productSummary = new Map();
       const orderRows = [];
@@ -1771,7 +1881,16 @@ function applyPermissions() {
     if (modalId === 'modal-order') {
       document.getElementById('o-editing-poid').value = '';
       document.getElementById('o-editing-detailid').value = '';
+      document.getElementById('o-type').value = 'pos_sale';
+      document.getElementById('o-docno').value = '';
+      document.getElementById('o-from-branch').value = 'YP';
+      document.getElementById('o-to-branch').value = '';
+      toggleOrderTypeFields();
       resetOrderDraft();
+    }
+    if (modalId === 'modal-si') {
+      if (!document.getElementById('f-from-branch').value) document.getElementById('f-from-branch').value = 'HQ/KL';
+      if (!document.getElementById('f-to-branch').value) document.getElementById('f-to-branch').value = 'YP';
     }
     // 打开 modal 后更新一次单位标签
     updateQtyLabels();
@@ -1785,6 +1904,11 @@ function applyPermissions() {
       if (title) title.textContent = t('newOrder');
       document.getElementById('btn-order').textContent = t('confirmOrder');
       document.getElementById('o-poid').value = '';
+      document.getElementById('o-docno').value = '';
+      document.getElementById('o-from-branch').value = 'YP';
+      document.getElementById('o-to-branch').value = '';
+      document.getElementById('o-type').value = 'pos_sale';
+      toggleOrderTypeFields();
       document.getElementById('o-editing-poid').value = '';
       document.getElementById('o-editing-detailid').value = '';
       orderDraftRows = [];
@@ -1794,6 +1918,9 @@ function applyPermissions() {
       if (title) title.textContent = t('newStockin');
       document.getElementById('btn-si').textContent = t('confirmStockin');
       document.getElementById('f-editing-siid').value = '';
+      document.getElementById('f-docno').value = '';
+      document.getElementById('f-from-branch').value = '';
+      document.getElementById('f-to-branch').value = '';
       document.getElementById('si-edit-rows').innerHTML = '';
       document.getElementById('si-new-row-area').style.display = '';
       document.getElementById('f-amount').value = '';
@@ -1841,9 +1968,16 @@ function applyPermissions() {
           const p = parseFloat(row.querySelector('.si-edit-price')?.value) || 0;
           if (q > 0) autoTotal += q * p;
         });
-        await sbPatch('stock_ins', 'StockInID', editingSIID, {
+        const stockInMeta = {
           SupplierID: document.getElementById('f-sup').value,
+          ExternalDocNo: document.getElementById('f-docno').value.trim(),
+          FromBranch: document.getElementById('f-from-branch').value.trim(),
+          ToBranch: document.getElementById('f-to-branch').value.trim(),
           TotalAmount: autoTotal || parseFloat(document.getElementById('f-amount').value) || 0
+        };
+        await patchStockInMeta(editingSIID, stockInMeta, {
+          SupplierID: stockInMeta.SupplierID,
+          TotalAmount: stockInMeta.TotalAmount
         });
         // 收集所有还留在画面上的 detailId
         const keptDetailIds = new Set();
@@ -1896,10 +2030,18 @@ function applyPermissions() {
           return sum + (price ? item.Qty * price : 0);
         }, 0);
 
-        await sbPost('stock_ins', {
+        const stockInMeta = {
           StockInID: stockInID, Date: dateStr, Time: timeStr,
           SupplierID: supplierID, Status: 'pending',
+          ExternalDocNo: document.getElementById('f-docno').value.trim(),
+          FromBranch: document.getElementById('f-from-branch').value.trim(),
+          ToBranch: document.getElementById('f-to-branch').value.trim(),
           TotalAmount: totalAmount || parseFloat(document.getElementById('f-amount').value) || 0
+        };
+        await postStockInWithExternal(stockInMeta, {
+          StockInID: stockInID, Date: dateStr, Time: timeStr,
+          SupplierID: supplierID, Status: 'pending',
+          TotalAmount: stockInMeta.TotalAmount
         });
         for (const item of siPendingItems) {
           const detailID = Math.random().toString(36).slice(2, 10);
@@ -1926,6 +2068,9 @@ function applyPermissions() {
     siPendingItems = [];
     renderSiPendingItems();
     document.getElementById('f-qty').value = '';
+    document.getElementById('f-docno').value = '';
+    document.getElementById('f-from-branch').value = '';
+    document.getElementById('f-to-branch').value = '';
     document.getElementById('f-amount').value = '';
     document.getElementById('f-editing-siid').value = '';
     document.getElementById('si-edit-rows').innerHTML = '';
@@ -1979,6 +2124,9 @@ function applyPermissions() {
 
     document.getElementById('si-new-row-area').style.display = 'none';
     document.getElementById('f-editing-siid').value = stockInID;
+    document.getElementById('f-docno').value = externalDocNo(si);
+    document.getElementById('f-from-branch').value = si.FromBranch || '';
+    document.getElementById('f-to-branch').value = si.ToBranch || '';
 
     const container = document.getElementById('si-edit-rows');
     container.innerHTML = details.map(d => {
@@ -2169,15 +2317,30 @@ function applyPermissions() {
       const timeStr = now.toTimeString().slice(0,8);
       const uid = Math.random().toString(36).slice(2, 6);
       const requestedInvoiceNo = document.getElementById('o-poid').value.trim();
+      const orderType = document.getElementById('o-type').value || 'pos_sale';
+      const externalDocNo = document.getElementById('o-docno').value.trim();
+      const fromBranch = document.getElementById('o-from-branch').value.trim();
+      const toBranch = document.getElementById('o-to-branch').value.trim();
+      if (orderType === 'branch_transfer' && !externalDocNo) throw new Error(t('enterDoNo'));
       const poID = `GM-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
       const editingPOID = document.getElementById('o-editing-poid').value;
       const totalAmount = rows.reduce((sum, row) => sum + row.LineAmount, 0);
+      const orderMeta = {
+        InvoiceNo: orderType === 'pos_sale' ? requestedInvoiceNo : '',
+        OrderType: orderType,
+        ExternalDocNo: orderType === 'branch_transfer' ? externalDocNo : '',
+        FromBranch: orderType === 'branch_transfer' ? fromBranch : '',
+        ToBranch: orderType === 'branch_transfer' ? toBranch : ''
+      };
 
       if (editingPOID) {
-        if (requestedInvoiceNo && await invoiceExists(requestedInvoiceNo, editingPOID)) {
+        if (orderMeta.InvoiceNo && await invoiceExists(orderMeta.InvoiceNo, editingPOID)) {
           throw new Error(t('invoiceExists'));
         }
-        const patchResult = await patchPurchaseOrderInvoice(editingPOID, requestedInvoiceNo, totalAmount);
+        if (orderMeta.ExternalDocNo && await orderDocExists(orderMeta.ExternalDocNo, editingPOID)) {
+          throw new Error(t('docExists'));
+        }
+        const patchResult = await patchPurchaseOrderMeta(editingPOID, orderMeta, totalAmount);
         const finalPOID = patchResult.finalPOID;
         const keptDetailIds = new Set();
         for (const row of rows) {
@@ -2204,12 +2367,15 @@ function applyPermissions() {
         }
         showToast(t('orderUpdated'), 'ok');
       } else {
-        if (requestedInvoiceNo && await invoiceExists(requestedInvoiceNo)) {
+        if (orderMeta.InvoiceNo && await invoiceExists(orderMeta.InvoiceNo)) {
           throw new Error(t('invoiceExists'));
         }
-        const fallbackPOID = requestedInvoiceNo || poID;
+        if (orderMeta.ExternalDocNo && await orderDocExists(orderMeta.ExternalDocNo)) {
+          throw new Error(t('docExists'));
+        }
+        const fallbackPOID = orderMeta.ExternalDocNo || orderMeta.InvoiceNo || poID;
         await postPurchaseOrderWithInvoice(
-          { POID: poID, InvoiceNo: requestedInvoiceNo, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount },
+          Object.assign({ POID: poID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount }, orderMeta),
           { POID: fallbackPOID, Date: dateStr, Time: timeStr, CustomerID: '', Status: 'pending', TotalAmount: totalAmount }
         );
         const detailPOID = purchaseOrdersInvoiceColumnReady ? poID : fallbackPOID;
@@ -2227,6 +2393,11 @@ function applyPermissions() {
       }
 
       document.getElementById('o-poid').value = '';
+      document.getElementById('o-docno').value = '';
+      document.getElementById('o-from-branch').value = '';
+      document.getElementById('o-to-branch').value = '';
+      document.getElementById('o-type').value = 'pos_sale';
+      toggleOrderTypeFields();
       document.getElementById('o-amount').value = '';
       document.getElementById('o-editing-poid').value = '';
       document.getElementById('o-editing-detailid').value = '';
@@ -2286,7 +2457,13 @@ function applyPermissions() {
     if (!details.length) { showToast(t('orderNoDetails'), 'err'); return; }
 
     // 预填 modal
-    document.getElementById('o-poid').value = orderInvoiceNo(order) || poID;
+    const orderType = order.OrderType || (externalDocNo(order) ? 'branch_transfer' : 'pos_sale');
+    document.getElementById('o-type').value = orderType;
+    document.getElementById('o-poid').value = orderType === 'pos_sale' ? (orderInvoiceNo(order) || poID) : '';
+    document.getElementById('o-docno').value = externalDocNo(order);
+    document.getElementById('o-from-branch').value = order.FromBranch || (orderType === 'branch_transfer' ? 'YP' : '');
+    document.getElementById('o-to-branch').value = order.ToBranch || '';
+    toggleOrderTypeFields();
     document.getElementById('o-amount').value = order.TotalAmount || '';
     document.getElementById('o-editing-poid').value = poID;
     document.getElementById('o-editing-detailid').value = '';
@@ -2620,6 +2797,12 @@ function applyPermissions() {
     if (lblSiProd) lblSiProd.textContent = t('product');
     const lblSiUp = document.getElementById('lbl-si-unitprice');
     if (lblSiUp) lblSiUp.textContent = t('unitPrice') + ' (RM)';
+    const lblSiDo = document.getElementById('lbl-si-do');
+    if (lblSiDo) lblSiDo.textContent = t('doNo');
+    const lblSiFrom = document.getElementById('lbl-si-from');
+    if (lblSiFrom) lblSiFrom.textContent = t('fromBranch');
+    const lblSiTo = document.getElementById('lbl-si-to');
+    if (lblSiTo) lblSiTo.textContent = t('toBranch');
 
     // 产品 modal
     const prodTitle = document.querySelector('#modal-prod .modal-title');
@@ -2693,6 +2876,19 @@ function applyPermissions() {
     if (lblOrderAmt) lblOrderAmt.textContent = t('totalAmount');
     const lblOrderInvoice = document.getElementById('lbl-order-invoice');
     if (lblOrderInvoice) lblOrderInvoice.textContent = t('externalInvoiceNo');
+    const lblOrderType = document.getElementById('lbl-order-type');
+    if (lblOrderType) lblOrderType.textContent = t('orderType');
+    const orderTypeSelect = document.getElementById('o-type');
+    if (orderTypeSelect) {
+      if (orderTypeSelect.options[0]) orderTypeSelect.options[0].text = t('posSale');
+      if (orderTypeSelect.options[1]) orderTypeSelect.options[1].text = t('branchTransfer');
+    }
+    const lblOrderDo = document.getElementById('lbl-order-do');
+    if (lblOrderDo) lblOrderDo.textContent = t('doNo');
+    const lblOrderFrom = document.getElementById('lbl-order-from');
+    if (lblOrderFrom) lblOrderFrom.textContent = t('fromBranch');
+    const lblOrderTo = document.getElementById('lbl-order-to');
+    if (lblOrderTo) lblOrderTo.textContent = t('toBranch');
     const orderPOID = document.getElementById('o-poid');
     if (orderPOID) orderPOID.placeholder = t('autoGenerate');
     const btnOrderAddItem = document.getElementById('btn-order-add-item');
@@ -2797,6 +2993,7 @@ function applyPermissions() {
     document.getElementById('order-search').addEventListener('input', debouncedRenderOrders);
     document.getElementById('stockin-date').addEventListener('change', renderStockIn);
     document.getElementById('order-date').addEventListener('change', renderOrders);
+    document.getElementById('o-type').addEventListener('change', toggleOrderTypeFields);
 
     // 产品选择 change 事件 → 更新数量单位标签
     document.getElementById('f-prod').addEventListener('change', updateQtyLabels);

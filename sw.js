@@ -1,5 +1,5 @@
-/* ===== GMPos Service Worker v4 ===== */
-const CACHE = 'gmpos-v4-static';
+/* ===== GMPos Service Worker v5 ===== */
+const CACHE = 'gmpos-v5-static';
 const STATIC_ASSETS = [
   '.',
   './index.html',
