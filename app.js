@@ -84,6 +84,10 @@
       unitPrice: '单价',
       lineTotal: '小计',
       itemTotal: '明细合计',
+      amountMismatch: '金额不符',
+      invoiceAmount: '单据金额',
+      detailAmount: '明细小计',
+      differenceAmount: '差额',
       priceRequired: '请输入单价',
       searchInvoice: '搜索 Invoice No...',
       totalAmount: '总金额 (RM)',
@@ -264,6 +268,10 @@
       unitPrice: 'Harga',
       lineTotal: 'Subtotal',
       itemTotal: 'Total Item',
+      amountMismatch: 'Total tidak cocok',
+      invoiceAmount: 'Total nota',
+      detailAmount: 'Subtotal item',
+      differenceAmount: 'Selisih',
       priceRequired: 'Masukkan harga',
       searchInvoice: 'Cari Invoice...',
       totalAmount: 'Total (RM)',
@@ -438,6 +446,10 @@
       unitPrice: 'Unit Price',
       lineTotal: 'Line Total',
       itemTotal: 'Item Total',
+      amountMismatch: 'Amount mismatch',
+      invoiceAmount: 'Invoice total',
+      detailAmount: 'Item subtotal',
+      differenceAmount: 'Difference',
       priceRequired: 'Enter unit price',
       searchInvoice: 'Search Invoice No...',
       totalAmount: 'Total Amount (RM)',
@@ -572,6 +584,7 @@
   let prodNameCache = new Map();
   let supNameCache = new Map();
   let orderDraftRows = [];
+  let orderDraftOriginalTotal = null;
   let poDetailsAmountColumnsReady = true;
   let purchaseOrdersInvoiceColumnReady = true;
   let purchaseOrdersTransferColumnsReady = true;
@@ -949,8 +962,8 @@ function applyPermissions() {
       const productName = escapeHTML(getProdName(d.ProductID));
       const unit = getProdUnit(d.ProductID);
       const qty = Number(d.QTY || 0);
-      const amount = Number(d.LineAmount || d.Amount || 0);
       const uprice = Number(d.UnitPrice || d.Price || 0);
+      const amount = orderLineAmount(d);
       const pricePart = uprice ? ` <span class="price">@RM${uprice.toFixed(2)}</span>` : '';
       const money = amount ? `<em>RM ${amount.toFixed(2)}</em>` : '';
       return `<div class="order-detail-line">
@@ -958,6 +971,40 @@ function applyPermissions() {
         <strong>${qty} ${unit}${money}</strong>
       </div>`;
     }).join('');
+  }
+
+  function orderLineAmount(detail) {
+    const qty = Number((detail && detail.QTY) || 0);
+    const unitPrice = Number((detail && (detail.UnitPrice || detail.Price)) || 0);
+    const savedAmount = Number((detail && (detail.LineAmount || detail.Amount)) || 0);
+    if (savedAmount) return savedAmount;
+    return qty * unitPrice;
+  }
+
+  function orderDetailTotal(poID) {
+    return getOrderDetails(poID).reduce((sum, detail) => sum + orderLineAmount(detail), 0);
+  }
+
+  function orderAmountCheck(order) {
+    const invoiceTotal = Number((order && order.TotalAmount) || 0);
+    const detailTotal = orderDetailTotal(order && order.POID);
+    const diff = detailTotal - invoiceTotal;
+    return {
+      invoiceTotal,
+      detailTotal,
+      diff,
+      mismatch: Math.abs(diff) >= 0.01
+    };
+  }
+
+  function renderAmountMismatchHtml(check) {
+    if (!check || !check.mismatch) return '';
+    return `<div class="amount-mismatch">
+      <strong>${t('amountMismatch')}</strong>
+      <span>${t('invoiceAmount')}: RM${check.invoiceTotal.toFixed(2)}</span>
+      <span>${t('detailAmount')}: RM${check.detailTotal.toFixed(2)}</span>
+      <span>${t('differenceAmount')}: RM${Math.abs(check.diff).toFixed(2)}</span>
+    </div>`;
   }
 
   function renderSiPendingItems() {
@@ -1085,10 +1132,45 @@ function applyPermissions() {
   }
 
   function syncOrderTotal() {
+    const calculatedTotal = calculateOrderTotal();
     const amount = document.getElementById('o-amount');
-    if (amount) amount.value = calculateOrderTotal().toFixed(2);
+    if (amount) amount.value = calculatedTotal.toFixed(2);
+    renderOrderDraftAmountCheck(calculatedTotal);
     const submit = document.getElementById('btn-order');
-    if (submit) submit.disabled = orderDraftRows.length === 0 || calculateOrderTotal() <= 0;
+    if (submit) submit.disabled = orderDraftRows.length === 0 || calculatedTotal <= 0;
+  }
+
+  function getOrderDraftWarningEl() {
+    let el = document.getElementById('order-amount-warning');
+    if (el) return el;
+    const amount = document.getElementById('o-amount');
+    if (!amount || !amount.closest('.form-group')) return null;
+    el = document.createElement('div');
+    el.id = 'order-amount-warning';
+    el.className = 'amount-mismatch order-amount-warning';
+    amount.closest('.form-group').insertAdjacentElement('afterend', el);
+    return el;
+  }
+
+  function renderOrderDraftAmountCheck(calculatedTotal) {
+    const el = getOrderDraftWarningEl();
+    if (!el) return;
+    if (orderDraftOriginalTotal == null) {
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    const diff = calculatedTotal - orderDraftOriginalTotal;
+    if (Math.abs(diff) < 0.01) {
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    el.style.display = '';
+    el.innerHTML = `<strong>${t('amountMismatch')}</strong>
+      <span>${t('invoiceAmount')}: RM${orderDraftOriginalTotal.toFixed(2)}</span>
+      <span>${t('detailAmount')}: RM${calculatedTotal.toFixed(2)}</span>
+      <span>${t('differenceAmount')}: RM${Math.abs(diff).toFixed(2)}</span>`;
   }
 
   function updateOrderDraftFromDom() {
@@ -1663,6 +1745,8 @@ function applyPermissions() {
       const isTransfer = (o.OrderType || 'pos_sale') === 'branch_transfer';
       const typeLabel = isTransfer ? t('branchTransfer') : t('posSale');
       const route = routeText(o);
+      const amountCheck = orderAmountCheck(o);
+      const mismatchBadge = amountCheck.mismatch ? '<span class="badge badge-mismatch">' + t('amountMismatch') + '</span>' : '';
       let statusBadge = '';
       let actions = '';
       if (status === 'pending') {
@@ -1678,14 +1762,15 @@ function applyPermissions() {
         statusBadge = '<span class="badge badge-done">' + t('orderDone') + '</span>';
       }
 
-      return `<div class="card">
+      return `<div class="card${amountCheck.mismatch ? ' card-mismatch' : ''}">
         <div class="row-flex" style="margin-bottom:5px">
           <span class="mono">${escapeHTML(displayNo)}</span>
-          ${statusBadge}
+          <span class="order-badges">${statusBadge}${mismatchBadge}</span>
           ${isAdmin() ? `<button class="del-btn sm" onclick="window.deleteOrder('${o.POID}')">✕</button>` : ''}
         </div>
         <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
         <div class="row-sub">${date} · ${typeLabel}${route ? ' · ' + escapeHTML(route) : ''} · RM${Number(o.TotalAmount || 0).toFixed(2)}${internalHint ? ' · ' + escapeHTML(internalHint) : ''}</div>
+        ${renderAmountMismatchHtml(amountCheck)}
         ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
@@ -1879,6 +1964,7 @@ function applyPermissions() {
     state.currentModal = modalId;
     document.getElementById(modalId).classList.add('open');
     if (modalId === 'modal-order') {
+      orderDraftOriginalTotal = null;
       document.getElementById('o-editing-poid').value = '';
       document.getElementById('o-editing-detailid').value = '';
       document.getElementById('o-type').value = 'pos_sale';
@@ -1912,6 +1998,8 @@ function applyPermissions() {
       document.getElementById('o-editing-poid').value = '';
       document.getElementById('o-editing-detailid').value = '';
       orderDraftRows = [];
+      orderDraftOriginalTotal = null;
+      renderOrderDraftAmountCheck(0);
     }
     if (wasStockInEdit) {
       const title = document.querySelector('#modal-si .modal-title');
@@ -2464,6 +2552,7 @@ function applyPermissions() {
     document.getElementById('o-from-branch').value = order.FromBranch || (orderType === 'branch_transfer' ? 'YP' : '');
     document.getElementById('o-to-branch').value = order.ToBranch || '';
     toggleOrderTypeFields();
+    orderDraftOriginalTotal = Number(order.TotalAmount || 0);
     document.getElementById('o-amount').value = order.TotalAmount || '';
     document.getElementById('o-editing-poid').value = poID;
     document.getElementById('o-editing-detailid').value = '';
