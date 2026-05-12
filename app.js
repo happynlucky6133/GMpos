@@ -559,6 +559,28 @@
     return t(key).replace(/\{(\w+)\}/g, (_, name) => vars[name] == null ? '' : String(vars[name]));
   }
 
+  function isLegacyGithubHost() {
+    return location.hostname === 'happynlucky6133.github.io' &&
+      location.pathname.toLowerCase().startsWith('/gmpos');
+  }
+
+  function showLegacySiteDisabled() {
+    localStorage.removeItem('ycpos_user');
+    currentUser = null;
+    document.getElementById('app-main').style.display = 'none';
+    document.getElementById('page-login').classList.add('active');
+    const box = document.querySelector('.login-box');
+    if (box) {
+      box.innerHTML = `
+        <div class="login-logo">📦</div>
+        <div class="login-title">GMPos 库存系统</div>
+        <div class="login-sub" style="font-size:16px;color:var(--danger);font-weight:700;margin-top:10px">
+          无法登入，请联系管理员
+        </div>
+      `;
+    }
+  }
+
   // ============================================================
   // Supabase 配置
   // ============================================================
@@ -3083,6 +3105,11 @@ function applyPermissions() {
   // 初始化
   // ============================================================
   function init() {
+    if (isLegacyGithubHost()) {
+      showLegacySiteDisabled();
+      return;
+    }
+
     // 语言切换
     document.querySelectorAll('.lang-btn').forEach(btn => {
       btn.addEventListener('click', function() {
