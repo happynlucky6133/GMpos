@@ -1135,7 +1135,7 @@ function applyPermissions() {
     const calculatedTotal = calculateOrderTotal();
     const amount = document.getElementById('o-amount');
     if (amount) amount.value = calculatedTotal.toFixed(2);
-    renderOrderDraftAmountCheck(calculatedTotal);
+    renderOrderDraftAmountCheck(null);
     const submit = document.getElementById('btn-order');
     if (submit) submit.disabled = orderDraftRows.length === 0 || calculatedTotal <= 0;
   }
@@ -1155,7 +1155,7 @@ function applyPermissions() {
   function renderOrderDraftAmountCheck(calculatedTotal) {
     const el = getOrderDraftWarningEl();
     if (!el) return;
-    if (orderDraftOriginalTotal == null) {
+    if (calculatedTotal == null || orderDraftOriginalTotal == null) {
       el.style.display = 'none';
       el.innerHTML = '';
       return;
@@ -2464,9 +2464,7 @@ function applyPermissions() {
           throw new Error(t('docExists'));
         }
         const oldDetails = getOrderDetails(editingPOID);
-        const originalAmountCheck = orderAmountCheck(editingOrder);
-        const amountToSave = originalAmountCheck.mismatch ? Number(editingOrder.TotalAmount || 0) : totalAmount;
-        const patchResult = await patchPurchaseOrderMeta(editingPOID, orderMeta, amountToSave);
+        const patchResult = await patchPurchaseOrderMeta(editingPOID, orderMeta, totalAmount);
         const finalPOID = patchResult.finalPOID;
         const keptDetailIds = new Set();
         for (const row of rows) {
@@ -2596,7 +2594,7 @@ function applyPermissions() {
     document.getElementById('o-from-branch').value = order.FromBranch || (orderType === 'branch_transfer' ? 'YP' : '');
     document.getElementById('o-to-branch').value = order.ToBranch || '';
     toggleOrderTypeFields();
-    orderDraftOriginalTotal = Number(order.TotalAmount || 0);
+    orderDraftOriginalTotal = null;
     document.getElementById('o-amount').value = order.TotalAmount || '';
     document.getElementById('o-editing-poid').value = poID;
     document.getElementById('o-editing-detailid').value = '';
