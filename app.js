@@ -1251,6 +1251,32 @@ function applyPermissions() {
     return rows;
   }
 
+  function aggregateOrderQty(rows, qtyKey) {
+    const totals = new Map();
+    (rows || []).forEach(row => {
+      const productID = row && row.ProductID;
+      if (!productID) return;
+      const qty = Number(row[qtyKey] || 0);
+      totals.set(productID, (totals.get(productID) || 0) + qty);
+    });
+    return totals;
+  }
+
+  async function applyDoneOrderStockCorrection(oldDetails, newRows) {
+    const oldQty = aggregateOrderQty(oldDetails, 'QTY');
+    const newQty = aggregateOrderQty(newRows, 'QTY');
+    const productIDs = new Set([...oldQty.keys(), ...newQty.keys()]);
+    for (const productID of productIDs) {
+      const delta = Number(oldQty.get(productID) || 0) - Number(newQty.get(productID) || 0);
+      if (Math.abs(delta) < 0.000001) continue;
+      const product = getProd(productID);
+      if (!product) throw new Error(t('skuNotFoundPrefix') + productID);
+      const nextStock = Number(product.StockBalance || 0) + delta;
+      await sbPatch('products', 'ProductID', productID, { StockBalance: nextStock });
+      product.StockBalance = nextStock;
+    }
+  }
+
   function hasOrderDraftData() {
     const invoice = (document.getElementById('o-poid')?.value || '').trim();
     if (invoice) return true;
@@ -1747,6 +1773,7 @@ function applyPermissions() {
       const route = routeText(o);
       const amountCheck = orderAmountCheck(o);
       const mismatchBadge = amountCheck.mismatch ? '<span class="badge badge-mismatch">' + t('amountMismatch') + '</span>' : '';
+      const canEditDone = status === 'done' && isAdmin();
       let statusBadge = '';
       let actions = '';
       if (status === 'pending') {
@@ -1760,6 +1787,9 @@ function applyPermissions() {
         statusBadge = '<span class="badge badge-cancelled">' + t('orderCancelled') + '</span>';
       } else {
         statusBadge = '<span class="badge badge-done">' + t('orderDone') + '</span>';
+        if (canEditDone) {
+          actions += `<button class="btn-sm btn-edit" onclick="window.editOrder('${o.POID}')">${t('orderEdit')}</button>`;
+        }
       }
 
       return `<div class="card${amountCheck.mismatch ? ' card-mismatch' : ''}">
@@ -1771,7 +1801,7 @@ function applyPermissions() {
         <div class="order-detail-list">${renderOrderDetailsHtml(o.POID)}</div>
         <div class="row-sub">${date} · ${typeLabel}${route ? ' · ' + escapeHTML(route) : ''} · RM${Number(o.TotalAmount || 0).toFixed(2)}${internalHint ? ' · ' + escapeHTML(internalHint) : ''}</div>
         ${renderAmountMismatchHtml(amountCheck)}
-        ${status === 'pending' ? `<div class="row-actions">${actions}</div>` : ''}
+        ${actions ? `<div class="row-actions">${actions}</div>` : ''}
       </div>`;
     }).join('');
     attachDeleteHandlers(container);
@@ -2413,6 +2443,11 @@ function applyPermissions() {
       const poID = `GM-${dateStr.replace(/-/g,'').slice(2)}-${uid}`;
       const editingPOID = document.getElementById('o-editing-poid').value;
       const totalAmount = rows.reduce((sum, row) => sum + row.LineAmount, 0);
+      const editingOrder = editingPOID ? state.orders.find(o => o.POID === editingPOID) : null;
+      const editingStatus = editingOrder ? (editingOrder.Status || 'pending') : 'pending';
+      if (editingPOID && editingStatus === 'done' && !isAdmin()) {
+        throw new Error(t('noPermission'));
+      }
       const orderMeta = {
         InvoiceNo: orderType === 'pos_sale' ? requestedInvoiceNo : '',
         OrderType: orderType,
@@ -2428,7 +2463,10 @@ function applyPermissions() {
         if (orderMeta.ExternalDocNo && await orderDocExists(orderMeta.ExternalDocNo, editingPOID)) {
           throw new Error(t('docExists'));
         }
-        const patchResult = await patchPurchaseOrderMeta(editingPOID, orderMeta, totalAmount);
+        const oldDetails = getOrderDetails(editingPOID);
+        const originalAmountCheck = orderAmountCheck(editingOrder);
+        const amountToSave = originalAmountCheck.mismatch ? Number(editingOrder.TotalAmount || 0) : totalAmount;
+        const patchResult = await patchPurchaseOrderMeta(editingPOID, orderMeta, amountToSave);
         const finalPOID = patchResult.finalPOID;
         const keptDetailIds = new Set();
         for (const row of rows) {
@@ -2452,6 +2490,9 @@ function applyPermissions() {
           if (!keptDetailIds.has(d.DetailID)) {
             await sbDelete('po_details', 'DetailID', d.DetailID);
           }
+        }
+        if (editingStatus === 'done') {
+          await applyDoneOrderStockCorrection(oldDetails, rows);
         }
         showToast(t('orderUpdated'), 'ok');
       } else {
@@ -2541,6 +2582,9 @@ function applyPermissions() {
   window.editOrder = function(poID) {
     const order = state.orders.find(o => o.POID === poID);
     if (!order) { showToast(t('orderNotFound'), 'err'); return; }
+    const status = order.Status || 'pending';
+    if (status !== 'pending' && !isAdmin()) { showToast(t('noPermission'), 'err'); return; }
+    if (status === 'cancelled') { showToast(t('orderProcessed'), 'err'); return; }
     const details = getOrderDetails(poID);
     if (!details.length) { showToast(t('orderNoDetails'), 'err'); return; }
 
