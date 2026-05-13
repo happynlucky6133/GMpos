@@ -139,16 +139,20 @@ html, body {
 
 .badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 8px;
-  border-radius: 99px;
-  font-weight: 600;
+  border-radius: 10px;
+  font-weight: 500;
 }
 .bg { background: var(--green-light); color: var(--green-dark); }
 .ba { background: var(--amber-light); color: var(--amber); }
 .br { background: var(--red-light); color: var(--red); }
 
-.mono { font-family: 'SF Mono', monospace; font-size: 11px; color: var(--text2); }
+.mono {
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  color: var(--text2);
+}
 
 .search-wrap {
   background: var(--surface);
@@ -312,7 +316,7 @@ select:focus, input:focus { border-color: var(--green); }
   margin: 6px 0 10px;
 }
 
-.btn-cancel {
+.btn-cancel-modal {
   background: none;
   border: 1px solid var(--border);
   padding: 11px;
@@ -407,7 +411,6 @@ select:focus, input:focus { border-color: var(--green); }
 .del-btn.sm { width: 22px; height: 22px; font-size: 10px; border-radius: 6px; }
 
 /* ===== 出货订单状态 ===== */
-.badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
 .badge-pending { background: #fff3cd; color: #856404; }
 .badge-done { background: #d4edda; color: #155724; }
 .badge-cancelled { background: #f8d7da; color: #721c24; }
@@ -660,8 +663,4 @@ select:focus, input:focus { border-color: var(--green); }
   border-radius: 10px;
   font-size: 11px;
   font-weight: 500;
-}
-.mono {
-  font-family: 'SFMono-Regular', Consolas, monospace;
-  letter-spacing: -0.3px;
 }

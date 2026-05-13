@@ -38,6 +38,7 @@ CREATE TABLE stock_ins (
   "Date" TEXT NOT NULL,
   "Time" TEXT NOT NULL,
   "SupplierID" TEXT NOT NULL,
+  "Status" TEXT DEFAULT 'pending',
   "CreatedBy" TEXT DEFAULT '',
   "CreatedAt" TEXT DEFAULT '',
   "UpdatedBy" TEXT DEFAULT '',
