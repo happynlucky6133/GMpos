@@ -559,34 +559,37 @@
     return t(key).replace(/\{(\w+)\}/g, (_, name) => vars[name] == null ? '' : String(vars[name]));
   }
 
-  function isLegacyGithubHost() {
-    return location.hostname === 'happynlucky6133.github.io' &&
-      location.pathname.toLowerCase().startsWith('/gmpos');
-  }
-
-  function showLegacySiteDisabled() {
-    localStorage.removeItem('ycpos_user');
-    currentUser = null;
-    document.getElementById('app-main').style.display = 'none';
-    document.getElementById('page-login').classList.add('active');
-    const box = document.querySelector('.login-box');
-    if (box) {
-      box.innerHTML = `
-        <div class="login-logo">📦</div>
-        <div class="login-title">GMPos 库存系统</div>
-        <div class="login-sub" style="font-size:16px;color:var(--danger);font-weight:700;margin-top:10px">
-          无法登入，请联系管理员
-        </div>
-      `;
-    }
-  }
 
   // ============================================================
   // Supabase 配置
   // ============================================================
-  const SUPABASE_URL = 'https://mxiiolycxbhrgpssdhtn.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_JMooT9uaCI9jAvaRaYQK8g_9-hJXaQp';
+  const SUPABASE_URL = window.__supabaseUrl || 'https://mxiiolycxbhrgpssdhtn.supabase.co';
+  const SUPABASE_KEY = window.__supabaseAnonKey || 'sb_publishable_JMooT9uaCI9jAvaRaYQK8g_9-hJXaQp';
   const SB = SUPABASE_URL + '/rest/v1';
+
+  // Auth token helper: uses session token if available, falls back to anon key
+  let sbAccessToken = null;
+  async function getSupabaseClient() {
+    if (window.__supabase) return window.__supabase;
+    if (window.__supabasePromise) return window.__supabasePromise;
+    return null;
+  }
+  async function refreshAccessToken() {
+    try {
+      const sb = await getSupabaseClient();
+      if (!sb) { sbAccessToken = null; return; }
+      const { data: { session } } = await sb.auth.getSession();
+      sbAccessToken = session?.access_token || null;
+    } catch (e) {
+      sbAccessToken = null;
+    }
+  }
+  function authHeaders() {
+    return {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + (sbAccessToken || SUPABASE_KEY)
+    };
+  }
 
   // ============================================================
   // 状态管理
@@ -694,9 +697,7 @@ function applyPermissions() {
     if (opts.select) params.set('select', opts.select);
     if (opts.order)  params.set('order', opts.order);
     const url = SB + '/' + table + '?' + params.toString();
-    const res = await fetch(url, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-    });
+    const res = await fetch(url, { headers: authHeaders() });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }
@@ -705,12 +706,7 @@ function applyPermissions() {
     const url = SB + '/' + table;
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Prefer': 'return=representation'
-      },
+      headers: Object.assign({ 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, authHeaders()),
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + await res.text());
@@ -721,11 +717,7 @@ function applyPermissions() {
     const url = SB + '/' + table + '?' + idCol + '=eq.' + encodeURIComponent(idVal);
     const res = await fetch(url, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY
-      },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error(await res.text());
@@ -737,9 +729,7 @@ function applyPermissions() {
     params.set(col, 'eq.' + encodeURIComponent(val));
     if (opts.select) params.set('select', opts.select);
     const url = SB + '/' + table + '?' + params.toString();
-    const res = await fetch(url, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-    });
+    const res = await fetch(url, { headers: authHeaders() });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }
@@ -748,10 +738,7 @@ function applyPermissions() {
     const url = SB + '/' + table + '?' + idCol + '=eq.' + encodeURIComponent(idVal);
     const res = await fetch(url, {
       method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY
-      }
+      headers: authHeaders()
     });
     if (!res.ok) throw new Error(await res.text());
     return true;
@@ -761,11 +748,7 @@ function applyPermissions() {
     const url = SB + '/rpc/' + rpcName;
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY
-      },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify(params)
     });
     if (!res.ok) throw new Error('RPC ' + rpcName + ' failed: ' + await res.text());
@@ -799,38 +782,42 @@ function applyPermissions() {
     btn.disabled = true;
     btn.textContent = t('loggingIn');
     try {
-      const users = await sbGetFiltered('users', 'Username', username, { select: '*' });
-      if (!users || users.length === 0) {
-        errEl.textContent = t('userNotFound');
+      const sb = await getSupabaseClient();
+      if (sb) {
+        const { data, error } = await sb.auth.signInWithPassword({
+          email: username + '@gmpos.local',
+          password: password
+        });
+        if (!error && data?.session) {
+          sbAccessToken = data.session.access_token;
+          const resp = await sbGetFiltered('user_profiles', 'id', data.session.user.id, { select: 'username,display_name,role' });
+          if (resp && resp.length > 0) {
+            const u = resp[0];
+            currentUser = { Username: u.username, DisplayName: u.display_name, Role: u.role };
+          } else {
+            await sb.auth.signOut().catch(() => {});
+            sbAccessToken = null;
+            errEl.textContent = t('userNotFound');
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = t('loginBtn');
+            return;
+          }
+          localStorage.setItem('ycpos_user', JSON.stringify(currentUser));
+          document.getElementById('page-login').classList.remove('active');
+          document.getElementById('app-main').style.display = 'flex';
+          applyPermissions(); applyLang();
+          showToast(t('welcome') + currentUser.DisplayName + '\uFF01', 'ok');
+          loadAll();
+          btn.disabled = false; btn.textContent = t('loginBtn');
+          return;
+        }
+        errEl.textContent = error ? t('wrongPwd') : t('userNotFound');
         errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = t('loginBtn');
-        return;
-      }
-      const user = users[0];
-      if (user.Password !== password) {
-        errEl.textContent = t('wrongPwd');
+      } else {
+        errEl.textContent = t('submitFail') + 'Supabase Auth not ready';
         errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = t('loginBtn');
-        return;
       }
-
-      currentUser = {
-        Username: user.Username,
-        DisplayName: user.DisplayName,
-        Role: user.Role
-      };
-      localStorage.setItem('ycpos_user', JSON.stringify(currentUser));
-
-      // 隐藏登录页，显示主应用
-      document.getElementById('page-login').classList.remove('active');
-      document.getElementById('app-main').style.display = 'flex';
-
-      applyPermissions();
-      applyLang();
-      showToast(t('welcome') + currentUser.DisplayName + '！', 'ok');
-      loadAll();
     } catch (e) {
       errEl.textContent = t('submitFail') + e.message;
       errEl.style.display = 'block';
@@ -839,9 +826,14 @@ function applyPermissions() {
     btn.textContent = t('loginBtn');
   }
 
-  function doLogout() {
+  async function doLogout() {
     currentUser = null;
+    sbAccessToken = null;
     localStorage.removeItem('ycpos_user');
+    const sb = await getSupabaseClient();
+    if (sb) {
+      sb.auth.signOut().catch(() => {});
+    }
     document.getElementById('app-main').style.display = 'none';
     document.getElementById('page-login').classList.add('active');
     document.getElementById('login-pass').value = '';
@@ -937,8 +929,13 @@ function applyPermissions() {
   // 工具函数
   // ============================================================
   function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, m => ({ '&':'&','<':'<','>':'>','"':'"',"'":'&#39;'})[m]);
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function todayLocal() {
@@ -2379,37 +2376,7 @@ function applyPermissions() {
   }
 
   async function submitSupplier() {
-    if (!canUseModal('modal-supplier')) { showToast(t('noPermission'), 'err'); return; }
-    const name = document.getElementById('ns-name').value.trim();
-    if (!name) { showToast(t('submitFail') + t('supplierName'), 'err'); return; }
-    const btn = document.getElementById('btn-supplier');
-    btn.disabled = true;
-    btn.textContent = t('submitting');
-    try {
-      const ts = Date.now().toString(36).slice(-4).toUpperCase();
-      const rnd = Math.random().toString(36).slice(2, 4).toUpperCase();
-      const newCID = 'C' + ts + rnd;
-      await sbPost('customers', {
-        CustomerID: newCID,
-        CustomerName: name,
-        Phone: document.getElementById('nc-phone').value.trim(),
-        Note: document.getElementById('nc-note').value.trim()
-      });
-      showToast('客户已添加！', 'ok');
-      document.getElementById('nc-name').value = '';
-      document.getElementById('nc-phone').value = '';
-      document.getElementById('nc-note').value = '';
-      closeModal();
-      auditLog('新增客户', newCID, name);
-      await loadAll();
-    } catch (e) {
-      showToast('提交失败: ' + e.message, 'err');
-    }
-    btn.disabled = false;
-    btn.textContent = '添加客户';
-  }
 
-  async function submitSupplier() {
     if (!canUseModal('modal-supplier')) { showToast('无权操作', 'err'); return; }
     const name = document.getElementById('ns-name').value.trim();
     if (!name) { showToast(t('enterSupplierName'), 'err'); return; }
@@ -2769,7 +2736,7 @@ function applyPermissions() {
     try {
       // 通过 RPC 事务完成合并
       const displayName = currentUser ? currentUser.DisplayName : '';
-      const result = await sbRpc('merge_sku', { p_from_id: fromID, p_to_id: toID, p_user: displayName });
+      const result = await sbRpc('merge_sku', { p_from_id: fromID, p_to_id: toID });
       if (result.ok) {
         showToast(t('mergedPrefix') + `${from.ProductName} → ${to.ProductName}`, 'ok');
         closeModal();
@@ -2825,22 +2792,15 @@ function applyPermissions() {
     if (!isAdmin()) { showToast(t('noPermission'), 'err'); return; }
     const username = document.getElementById('au-user').value.trim();
     const display = document.getElementById('au-display').value.trim();
-    const password = document.getElementById('au-pass').value.trim();
     const role = document.getElementById('au-role').value;
-    if (!username || !display || !password) { showToast(t('fillAll'), 'err'); return; }
+    if (!username || !display || !role) { showToast(t('fillAll'), 'err'); return; }
     const btn = document.getElementById('btn-adduser');
     btn.disabled = true;
     btn.textContent = t('addingUser');
     try {
-      // 检查用户名是否已存在
-      const exist = await sbGetFiltered('users', 'Username', username, { select: 'Username' });
+      const exist = await sbGetFiltered('user_profiles', 'username', username, { select: 'username' });
       if (exist && exist.length > 0) { showToast(t('userExists'), 'err'); btn.disabled = false; btn.textContent = t('addUserBtn'); return; }
-      await sbPost('users', { Username: username, DisplayName: display, Password: password, Role: role });
-      showToast(display + t('userAdded'), 'ok');
-      document.getElementById('au-user').value = '';
-      document.getElementById('au-display').value = '';
-      document.getElementById('au-pass').value = '';
-      closeModal();
+      showToast('请先在 Supabase Dashboard 创建 Auth 用户，再在 user_profiles 中添加对应资料。', 'err');
     } catch (e) {
       showToast(t('submitFail') + e.message, 'err');
     }
@@ -2861,11 +2821,16 @@ function applyPermissions() {
     btn.disabled = true;
     btn.textContent = t('submitting');
     try {
-      // 验证当前密码
-      const users = await sbGetFiltered('users', 'Username', currentUser.Username, { select: '*' });
-      if (!users || users.length === 0) { showToast(t('userNotFound'), 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
-      if (users[0].Password !== oldPw) { showToast(t('wrongCurrentPwd'), 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
-      await sbPatch('users', 'Username', currentUser.Username, { Password: newPw });
+      // Verify current password via Supabase Auth re-auth, then update
+      const sb = await getSupabaseClient();
+      if (!sb) { showToast(t('submitFail') + 'Supabase Auth not ready', 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
+      const { error: signInErr } = await sb.auth.signInWithPassword({
+        email: currentUser.Username + '@gmpos.local',
+        password: oldPw
+      });
+      if (signInErr) { showToast(t('wrongCurrentPwd'), 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
+      const { error: updateErr } = await sb.auth.updateUser({ password: newPw });
+      if (updateErr) { showToast(t('submitFail') + updateErr.message, 'err'); btn.disabled = false; btn.textContent = t('changePwd'); return; }
       showToast(t('pwdChanged'), 'ok');
       document.getElementById('cp-old').value = '';
       document.getElementById('cp-new').value = '';
@@ -2979,7 +2944,7 @@ function applyPermissions() {
     if (editProdTitle) editProdTitle.textContent = t('editProduct');
     const btnEditProd = document.getElementById('btn-edit-prod');
     if (btnEditProd) btnEditProd.textContent = t('saveChanges');
-    const editProdCancel = document.querySelector('#modal-edit-prod .btn-cancel');
+    const editProdCancel = document.querySelector('#modal-edit-prod .btn-cancel-modal');
     if (editProdCancel) editProdCancel.textContent = t('cancel');
     const editProdLabels = document.querySelectorAll('#modal-edit-prod .form-label');
     if (editProdLabels[0]) editProdLabels[0].textContent = t('productName');
@@ -3001,14 +2966,14 @@ function applyPermissions() {
     if (mergeLabels[1]) mergeLabels[1].textContent = t('targetSku');
     const btnMerge = document.getElementById('btn-merge-sku');
     if (btnMerge) btnMerge.textContent = t('confirmMerge');
-    const mergeCancel = document.querySelector('#modal-merge-sku .btn-cancel');
+    const mergeCancel = document.querySelector('#modal-merge-sku .btn-cancel-modal');
     if (mergeCancel) mergeCancel.textContent = t('cancel');
 
     // 供应商 modal
     const supTitle = document.querySelector('#modal-supplier .modal-title');
     if (supTitle) supTitle.textContent = t('newSupplier');
     document.getElementById('btn-supplier').textContent = t('addSupplier');
-    const supCancel = document.querySelector('#modal-supplier .btn-cancel');
+    const supCancel = document.querySelector('#modal-supplier .btn-cancel-modal');
     if (supCancel) supCancel.textContent = t('cancel');
     const lblSupName = document.getElementById('lbl-sup-name');
     if (lblSupName) lblSupName.textContent = t('supplierName');
@@ -3021,7 +2986,7 @@ function applyPermissions() {
     const orderTitle = document.querySelector('#modal-order .modal-title');
     if (orderTitle) orderTitle.textContent = t('newOrder');
     document.getElementById('btn-order').textContent = t('confirmOrder');
-    const orderCancel = document.querySelector('#modal-order .btn-cancel');
+    const orderCancel = document.querySelector('#modal-order .btn-cancel-modal');
     if (orderCancel) orderCancel.textContent = t('cancel');
     const lblOrderProd = document.getElementById('lbl-order-product');
     if (lblOrderProd) lblOrderProd.textContent = t('product');
@@ -3051,7 +3016,7 @@ function applyPermissions() {
     const auTitle = document.querySelector('#modal-adduser .modal-title');
     if (auTitle) auTitle.textContent = t('addUser');
     document.getElementById('btn-adduser').textContent = t('addUserBtn');
-    const auCancel = document.querySelector('#modal-adduser .btn-cancel');
+    const auCancel = document.querySelector('#modal-adduser .btn-cancel-modal');
     if (auCancel) auCancel.textContent = t('cancel');
     const lblAuUser = document.getElementById('lbl-au-user');
     if (lblAuUser) lblAuUser.textContent = t('username');
@@ -3073,7 +3038,7 @@ function applyPermissions() {
     const cpTitle = document.querySelector('#modal-changepw .modal-title');
     if (cpTitle) cpTitle.textContent = t('changePwd');
     document.getElementById('btn-changepw').textContent = t('changePwd');
-    const cpCancel = document.querySelector('#modal-changepw .btn-cancel');
+    const cpCancel = document.querySelector('#modal-changepw .btn-cancel-modal');
     if (cpCancel) cpCancel.textContent = t('cancel');
     const lblCpOld = document.getElementById('lbl-cp-old');
     if (lblCpOld) lblCpOld.textContent = t('currentPwd');
@@ -3105,12 +3070,23 @@ function applyPermissions() {
   // 初始化
   // ============================================================
   function init() {
-    if (isLegacyGithubHost()) {
-      showLegacySiteDisabled();
-      return;
-    }
+    // 尝试恢复 Supabase Auth session
+    getSupabaseClient().then(sb => {
+      if (!sb) return;
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (session) sbAccessToken = session.access_token;
+      });
+      sb.auth.onAuthStateChange((event, session) => {
+        if (session) {
+          sbAccessToken = session.access_token;
+        } else if (event === 'SIGNED_OUT') {
+          sbAccessToken = null;
+        }
+      });
+    });
 
     // 语言切换
+
     document.querySelectorAll('.lang-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         currentLang = this.dataset.lang;
@@ -3201,7 +3177,7 @@ function applyPermissions() {
     document.getElementById('ms-to').addEventListener('change', updateMergePreview);
 
     // 取消按钮关闭
-    document.querySelectorAll('.btn-cancel').forEach(btn => {
+    document.querySelectorAll('.btn-cancel-modal').forEach(btn => {
       btn.addEventListener('click', requestCloseModal);
     });
 

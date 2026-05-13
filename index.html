@@ -172,7 +172,7 @@
     <div id="si-edit-rows"></div>
     <input type="hidden" id="f-editing-siid" value="">
     <button class="btn-primary" id="btn-si">确认进货</button>
-    <button class="btn-cancel" id="btn-si-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-si-cancel">取消</button>
   </div>
 </div>
 
@@ -185,7 +185,7 @@
     <div class="form-group"><label class="form-label" id="lbl-prod-grade">等级</label><input type="text" id="np-grade" placeholder="输入等级（如 A、B、C 或自定义）"></div>
     <div class="form-group"><label class="form-label" id="lbl-prod-unit">单位</label><select id="np-unit"><option>kg</option><option>box</option><option>pcs</option></select></div>
     <button class="btn-primary" id="btn-prod">添加产品</button>
-    <button class="btn-cancel" id="btn-prod-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-prod-cancel">取消</button>
   </div>
 </div>
 
@@ -200,7 +200,7 @@
     <div class="form-group"><label class="form-label">单位</label><select id="ep-unit"><option>kg</option><option>box</option><option>pcs</option></select></div>
     <div class="form-group"><label class="form-label">库存数量</label><input type="number" id="ep-stock" placeholder="0" min="0" step="0.01" inputmode="decimal"></div>
     <button class="btn-primary" id="btn-edit-prod">保存更改</button>
-    <button class="btn-cancel" id="btn-edit-prod-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-edit-prod-cancel">取消</button>
   </div>
 </div>
 
@@ -218,7 +218,7 @@
     </div>
     <div id="ms-preview" style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:8px;background:var(--amber-light);border-radius:8px"></div>
     <button class="btn-primary" id="btn-merge-sku" style="background:var(--red)">确认合并</button>
-    <button class="btn-cancel" id="btn-merge-sku-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-merge-sku-cancel">取消</button>
   </div>
 </div>
 
@@ -231,7 +231,7 @@
     <div class="form-group"><label class="form-label" id="lbl-sup-phone">联系电话（可选）</label><input type="text" id="ns-phone" placeholder="例：012-3456789" inputmode="tel"></div>
     <div class="form-group"><label class="form-label" id="lbl-sup-note">备注（可选）</label><input type="text" id="ns-note" placeholder="地址或其他备注"></div>
     <button class="btn-primary" id="btn-supplier">添加供应商</button>
-    <button class="btn-cancel" id="btn-supplier-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-supplier-cancel">取消</button>
   </div>
 </div>
 
@@ -255,7 +255,7 @@
     <input type="hidden" id="o-editing-poid" value="">
     <input type="hidden" id="o-editing-detailid" value="">
     <button class="btn-primary" id="btn-order">出货</button>
-    <button class="btn-cancel" id="btn-order-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-order-cancel">取消</button>
   </div>
 </div>
 
@@ -266,7 +266,6 @@
     <div class="modal-title">新增用户</div>
     <div class="form-group"><label class="form-label" id="lbl-au-user">用户名</label><input type="text" id="au-user" placeholder="输入登录用户名"></div>
     <div class="form-group"><label class="form-label" id="lbl-au-display">显示名称</label><input type="text" id="au-display" placeholder="输入显示名称"></div>
-    <div class="form-group"><label class="form-label" id="lbl-au-pass">密码</label><input type="password" id="au-pass" placeholder="输入密码"></div>
     <div class="form-group"><label class="form-label" id="lbl-au-role">角色</label>
       <select id="au-role">
         <option value="admin">👑 管理员</option>
@@ -274,7 +273,7 @@
       </select>
     </div>
     <button class="btn-primary" id="btn-adduser">添加用户</button>
-    <button class="btn-cancel" id="btn-adduser-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-adduser-cancel">取消</button>
   </div>
 </div>
 
@@ -287,11 +286,25 @@
     <div class="form-group"><label class="form-label" id="lbl-cp-new">新密码</label><input type="password" id="cp-new" placeholder="输入新密码"></div>
     <div class="form-group"><label class="form-label" id="lbl-cp-confirm">确认新密码</label><input type="password" id="cp-confirm" placeholder="再次输入新密码"></div>
     <button class="btn-primary" id="btn-changepw">修改密码</button>
-    <button class="btn-cancel" id="btn-changepw-cancel">取消</button>
+    <button class="btn-cancel-modal" id="btn-changepw-cancel">取消</button>
   </div>
 </div>
 
-<script src="v2.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<!-- Supabase JS SDK (lazy-loaded ESM) -->
+<script>
+window.__supabaseUrl = 'https://mxiiolycxbhrgpssdhtn.supabase.co';
+window.__supabaseAnonKey = 'sb_publishable_JMooT9uaCI9jAvaRaYQK8g_9-hJXaQp';
+window.__supabasePromise = import('https://esm.sh/@supabase/supabase-js@2.48.1').then(mod => {
+  const client = mod.createClient(window.__supabaseUrl, window.__supabaseAnonKey);
+  window.__supabase = client;
+  document.dispatchEvent(new Event('supabase-ready'));
+  return client;
+}).catch(e => {
+  console.warn('Supabase JS SDK failed to load; authenticated login will be unavailable', e);
+});
+</script>
+<script src="v2.js?v=10"></script>
+<script src="app.js?v=10"></script>
+
 </body>
 </html>
