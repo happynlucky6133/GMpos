@@ -1852,7 +1852,7 @@ function applyPermissions() {
     try {
       const url = SB + '/purchase_orders?Date=eq.' + encodeURIComponent(dateStr) + '&Status=eq.done&order=Time';
       const res = await fetch(url, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        headers: authHeaders()
       });
       if (!res.ok) throw new Error(await res.text());
       const orders = (await res.json()).filter(o => (o.OrderType || 'pos_sale') !== 'branch_transfer');
@@ -1864,7 +1864,7 @@ function applyPermissions() {
         count++;
         const url2 = SB + '/po_details?POID=eq.' + encodeURIComponent(o.POID) + '&select=ProductID,QTY,UnitPrice,LineAmount';
         const res2 = await fetch(url2, {
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+          headers: authHeaders()
         });
         const orderItems = [];
         if (res2.ok) {
