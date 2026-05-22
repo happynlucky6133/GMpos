@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "npx ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" prisma/seed.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^7.8.0",
